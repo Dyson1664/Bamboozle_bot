@@ -1,0 +1,52 @@
+html, body {
+    height: 100%; /* Full viewport height */
+    margin: 0;
+    padding: 0;
+    overflow: hidden; /* Prevents any scrolling */
+}
+.container {
+    max-width: 400px;
+    width: 100%; /* Full width within constraints */
+    margin: auto;
+    height: 100%; /* Full viewport height */
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between; /* Improved spacing */
+    padding: 20px 10px; /* Reduced padding for more space */
+    box-sizing: border-box; /* Includes padding in height calculation */
+}
+.form-group {
+    margin-bottom: 8px; /* Reduced margin */
+}
+h2 {
+    margin-bottom: 10px; /* Reduced margin */
+    line-height: 1.2; /* Reduced line height for header */
+    font-size: 1.5rem; /* Smaller font size if necessary */
+}
+.btn-custom, .form-control {
+    padding: 8px; /* Reduced padding */
+    margin-bottom: 8px; /* Reduced bottom margin */
+}
+textarea.form-control {
+    height: 80px; /* Reducing default textarea height */
+}
+@media (max-height: 700px) {
+    .btn-custom, .form-control {
+        padding: 6px;
+        font-size: 0.9rem;
+    }
+    h2 {
+        font-size: 1.3rem;
+    }
+}
+
+.container2 {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+}
+
+btn btn-custom2 {
+    padding: 8px;
+    margin-bottom: 8px;
+}

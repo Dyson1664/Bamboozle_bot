@@ -1,0 +1,2 @@
+[console_scripts]
+word-search = word_search_generator.cli:main

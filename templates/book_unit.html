@@ -1,0 +1,161 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ESL Game Creation</title>
+    <!-- Bootstrap CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/styles.css') }}">
+
+    <style>
+        body { padding-top: 40px; }
+        .container { max-width: 400px; margin: auto; }
+        .form-group { margin-bottom: 15px; }
+        h2 { text-align: center; margin-bottom: 20px; }
+        .btn-custom {
+            background-color: #007bff; color: white; width: 100%;
+            padding: 10px; border: none; border-radius: 5px; cursor: pointer;
+            margin-bottom: 10px;
+        }
+        .btn-custom:hover { background-color: #0056b3; }
+        .error-message { color: red; margin-bottom: 15px; }
+    </style>
+
+    <script>
+        var bookToUnits = {{ book_to_units | tojson | safe }};
+        var selected_unit = "{{ selected_unit }}";
+
+        function updateUnits() {
+            var selectedBook = document.getElementById('bookName').value;
+            var unitsDropdown = document.getElementById('unitNumber');
+            var units = bookToUnits[selectedBook] || [];
+            unitsDropdown.innerHTML = '';
+            units.forEach(function(unit) {
+                var opt = document.createElement('option');
+                opt.value = unit;
+                opt.innerHTML = unit;
+                if (unit == selected_unit) {
+                    opt.selected = true;
+                }
+                unitsDropdown.appendChild(opt);
+            });
+        }
+
+        window.onload = function() {
+            updateUnits();
+            document.getElementById('bookName').value = "{{ selected_book }}";
+        }
+
+        function setClickedButton(value) {
+            document.getElementById('clickedButton').value = value;
+        }
+
+        function validateForm() {
+            var clickedButton = document.getElementById('clickedButton').value;
+            var bamboozleTitle = document.getElementById('bamboozleTitle').value.trim();
+
+            if (clickedButton === 'bamboozle' && bamboozleTitle === '') {
+                alert('Please enter a Bamboozle title');
+                return false;  // Prevent form submission
+            }
+
+            return true;  // Allow form submission
+        }
+    </script>
+    <style>
+        html, body {
+            height: 100%; /* Ensures that the body takes full viewport height */
+            margin: 0;
+            padding: 0;
+            overflow: hidden; /* Prevents scrolling */
+        }
+        .container {
+            max-width: 400px;
+            margin: auto;
+            height: 100%; /* Container must not exceed the viewport height */
+            display: flex;
+            flex-direction: column; /* Stacks children vertically */
+            justify-content: space-between; /* Distributes spacing between and around content items */
+            padding: 40px 0; /* Adds padding at the top and bottom */
+        }
+        .form-group {
+            margin-bottom: 15px;
+        }
+        h2 {
+            text-align: center;
+            margin-bottom: 20px;
+        }
+        .btn-custom {
+            background-color: #007bff;
+            color: white;
+            width: 100%;
+            padding: 10px;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            margin-bottom: 10px;
+        }
+        .btn-custom:hover {
+            background-color: #0056b3;
+        }
+        .error-message {
+            color: red;
+            margin-bottom: 15px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h2>ESL Game Creation</h2>
+        {% if error %}
+            <div class="error-message">{{ error }}</div>
+        {% endif %}
+        <form id="bookForm" method="post" onsubmit="return validateForm()">
+            <div class="form-group">
+                <label for="bookName">Book Name:</label>
+                <select class="form-control" name="bookName" id="bookName" onchange="updateUnits()">
+                    <option value="None" {% if not selected_book or selected_book =='None' %} selected {% endif %}>None</option>
+                    {% for book in books %}
+                        <option value="{{ book }}" {% if selected_book == book %} selected {% endif %}>{{ book }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="form-group">
+                <label for="unitNumber">Unit Number:</label>
+                <select class="form-control" name="unitNumber" id="unitNumber">
+                    <!-- Units will be dynamically populated -->
+                </select>
+            </div>
+            <div class="form-group">
+                <label for="kgTitle">Kindergarten Title:</label>
+                <select class="form-control" name="kgTitle" id="kgTitle">
+                    <option value="NONE">None</option>
+                    {% for title in kg_vocab.keys() %}
+                        <option value="{{ title }}">{{ title }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="form-group">
+                <label for="bamboozleTitle">Bamboozle title:</label>
+                <input type="text" class="form-control" id="bamboozleTitle" name="bamboozleTitle" placeholder="Enter Bamboozle title">
+            </div>
+            <input type="hidden" name="clickedButton" id="clickedButton" value="" />
+            <button type="submit" class="btn btn-custom" name="action" value="ShowVocab" onclick="setClickedButton('ShowVocab')">Show Vocab</button>
+            <div class="form-group">
+                <textarea class="form-control" id="vocab" name="vocab" placeholder="View vocab" rows="4">{{ vocab }}</textarea>
+            </div>
+            <button type="submit" class="btn btn-custom" name="action" value="bamboozle" onclick="setClickedButton('bamboozle')">Create Bamboozle</button>
+            <div class="d-grid gap-2 d-md-flex justify-content-md-end">
+                <button type="submit" class="btn btn-custom" name="action" value="reviewQuiz">Create Review Quiz</button>
+                <button type="submit" class="btn btn-custom" name="action" value="wordSearch">Create Word Search</button>
+            </div>
+            <div class="d-grid gap-2 d-md-flex justify-content-md-end">
+                <a href="https://apps.cec.com.vn/my-calendar/overview" target="_blank" class="btn btn-custom">CEC APP</a>
+                <a href="https://www.baamboozle.com/mygames" target="_blank" class="btn btn-custom">Bamboozle</a>
+            </div>
+        </form>
+    </div>
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+</body>
+</html>
