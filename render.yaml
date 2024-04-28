@@ -7,13 +7,12 @@ services:
     region: Singapore (Southeast Asia)
     envVars:
       - key: PASSWORD
-        value: "{{PASSWORD}}"
+        value: "cec.com.vn"
       - key: EMAIL
-        value: "{{EMAIL}}"
+        value: "teacher1@cec.com.vn"
       - key: API_KEY
-        value: "{{API_KEY}}"
+        value: "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"
       - key: E_PASS
-        value: "{{E_PASS}}"
+        value: "cec.com.vn"
       - key: E_NAME
-        value: "{{E_NAME}}"
-
+        value: "dave.reilly@cec.com.vn"
