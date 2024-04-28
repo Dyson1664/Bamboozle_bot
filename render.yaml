@@ -5,3 +5,15 @@ services:
     buildCommand: "./setup-chrome.sh && chmod +x setup-chrome.sh && ./setup-chrome.sh"
     startCommand: "./start.sh && chmod +x start.sh && ./start.sh"
     region: Singapore (Southeast Asia)
+    envVars:
+      - key: PASSWORD
+        value: "{{PASSWORD}}"
+      - key: EMAIL
+        value: "{{EMAIL}}"
+      - key: API_KEY
+        value: "{{API_KEY}}"
+      - key: E_PASS
+        value: "{{E_PASS}}"
+      - key: E_NAME
+        value: "{{E_NAME}}"
+
