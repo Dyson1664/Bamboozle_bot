@@ -1,1 +1,5 @@
-Requirement already satisfied: typing_extensions in c:\users\pc\desktop\bamboozle_esl-game-main\venv\lib\site-packages (4.11.0)
+Collecting typing-extensions
+  Using cached typing_extensions-4.11.0-py3-none-any.whl.metadata (3.0 kB)
+Using cached typing_extensions-4.11.0-py3-none-any.whl (34 kB)
+Installing collected packages: typing-extensions
+Successfully installed typing-extensions-4.11.0
