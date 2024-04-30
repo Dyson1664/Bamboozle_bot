@@ -2,7 +2,7 @@ services:
   - type: web
     name: my-flask-app
     env: python
-    buildCommand: "./setup-chrome.sh && chmod +x setup-chrome.sh && ./setup-chrome.sh"
+    buildCommand: "./build.sh && chmod +x build.sh && ./build.sh"
     startCommand: "./start.sh && chmod +x start.sh && ./start.sh"
     region: Singapore (Southeast Asia)
     envVars:
