@@ -19,5 +19,5 @@ services:
         sync: false
       - key: DATABASE_URL
         fromDatabase: # Reference a property of a database (see available properties below)
-          name: bam_db
+          name: dpg-com8f5ol6cac73d3ab7g-a
           property: postgres://bam_db_r2tg_user:xUVDXbrbAEriQxYP2KIojlMiFVtXyvFB@dpg-com8f5ol6cac73d3ab7g-a/bam_db_r2tg
