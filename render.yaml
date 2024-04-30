@@ -1,18 +1,23 @@
 services:
-  - type: web
-    name: my-flask-app
-    env: python
+  - type: web # A Python web service named flask running on a free instance
+    plan: free
+    name: flask-app
+    runtime: python
+    repo:  https://github.com/Dyson1664/Bamboozle_bot_render.git
     buildCommand: "./build.sh && chmod +x build.sh && ./build.sh"
     startCommand: "./start.sh && chmod +x start.sh && ./start.sh"
-    region: Singapore (Southeast Asia)
-    envVars:
+    envVars: # Environment variables
       - key: PASSWORD
         sync: false
       - key: EMAIL
         sync: false
       - key: API_KEY
-        sync: false
+        sync: false # Prompt for a value in the Render Dashboard
       - key: E_PASS
         sync: false
       - key: E_NAME
         sync: false
+      - key: DATABASE_URL
+        fromDatabase: # Reference a property of a database (see available properties below)
+          name: bam_db
+          property: postgres://bam_db_r2tg_user:xUVDXbrbAEriQxYP2KIojlMiFVtXyvFB@dpg-com8f5ol6cac73d3ab7g-a/bam_db_r2tg
