@@ -1,4 +1,5 @@
 import sqlite3
+import psycopg2
 
 def create_db():
     conn = sqlite3.connect('vocabulary.db2')
@@ -183,16 +184,53 @@ def get_all_books():
     return books
 
 
+def db_connection():
+    try:
+        conn = psycopg2.connect(host='127.0.0.1', dbname='bamboozle_bot_users', user='postgres', password='1234567890')
+        return conn
+    except:
+        print('No connection')
+        return None
+
+def init_db():
+    with db_connection() as conn:
+        with conn.cursor() as cur:
+            cur.execute('''
+            CREATE TABLE IF NOT EXISTS users (
+            id SERIAL PRIMARY KEY,
+            username VARCHAR(255) UNIQUE NOT NULL,
+            password VARCHAR(255) NOT NULL,
+            email VARCHAR(255) NOT NULL
+            
+            );
+            ''')
+            conn.commit()
+
+def show_db():
+    with db_connection() as conn:
+        with conn.cursor() as cur:
+            cur.execute('SELECT * FROM users')
+            users = cur.fetchall()
+
+    for user in users:
+        print(user)
+
+
+
 if __name__ == '__main__':
+    # print(db_connection())
+    # init_db()
+    pass
+
     # create_db2()  # Create the database and tables
     # insert_vocab(vocab_entries)  # Insert initial vocabulary entries
     # remove_duplicates()  # Optionally remove duplicates if needed
-    get_vocab('Look1', 11)
-    get_kg_vocab('KG', 'Bedroom')
+    # get_vocab('Look1', 11)
+    # get_kg_vocab('KG', 'Bedroom')
     # make_kg_dict()
     # insert_vocabs2(vocab_entries2)
-    # pass
-
+    # create_users_db()
+    # users_db_connection()
 
 
 

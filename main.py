@@ -1,4 +1,4 @@
-from flask import Flask, render_template, request, session
+from flask import Flask, render_template, request, session, redirect, url_for, flash, jsonify
 from selenium import webdriver
 from selenium.webdriver.common.by import By
 from selenium.webdriver.support.ui import WebDriverWait
@@ -21,6 +21,10 @@ from email.mime.text import MIMEText
 from email.mime.base import MIMEBase
 from email import encoders
 
+from flask_login import UserMixin, login_user, LoginManager, login_required, logout_user, current_user
+from werkzeug.security import generate_password_hash, check_password_hash
+import psycopg2
+
 import os
 from dotenv import load_dotenv
 load_dotenv()
@@ -35,9 +39,63 @@ app = Flask(__name__)
 app.secret_key = 'your_secret_key'
 client = OpenAI(api_key=os.environ['API_KEY'])
 
+
+login_manager = LoginManager()
+login_manager.init_app(app)
+login_manager.login_view = 'login'
+
+
+import psycopg2
+
 # os.environ["GOOGLE_CHROME_BIN"] = r"C:\Users\PC\Downloads\chrome-win64 (3)\chrome-win64\chrome.exe"
 
 # os.environ["CHROMEDRIVER_PATH"] = r"C:\Users\PC\Downloads\chromedriver-win64 (3)\chromedriver-win64\chromedriver.exe"
+
+@login_manager.user_loader
+def load_user(user_id):
+    print(User.check_user(int(user_id)))
+    return User.check_user(int(user_id))
+
+class User(UserMixin):
+    def __init__(self, id, username, password, email):
+        self.id = id
+        self.username = username
+        self.password = password
+        self.email = email
+
+    @staticmethod
+    def add_user(username, password, email):
+        hashed_password = generate_password_hash(password)
+        with db_5.db_connection() as conn:
+            with conn.cursor() as cur:
+                cur.execute('INSERT INTO users (username, password, email) VALUES (%s, %s, %s)', (username, hashed_password, email))
+                conn.commit()
+
+    @staticmethod
+    def check_user(user_id):
+        with db_5.db_connection() as conn:
+            with conn.cursor() as cur:
+                cur.execute('SELECT * FROM users WHERE id = %s', (user_id,))
+                user = cur.fetchone()
+
+        if user:
+            user_object = User(id=user[0], username=user[1], password=[2], email=user[3])
+            return user_object
+        return None
+
+    @staticmethod
+    def verify_user(username, password):
+        with db_5.db_connection() as conn:
+            with conn.cursor() as cur:
+                cur.execute('SELECT * FROM users WHERE username = %s', (username,))
+                user = cur.fetchone()
+
+        if user and check_password_hash(user[2], password):
+            return User(id=user[0], username=user[1], password=[2], email=user[3])
+# DO I NEED TO RETURN THE FULL USER. YES BUT IS THERE A FASTER WAY?
+        return None
+
+
 class Driver:
     def __init__(self):
         # chrome_options = webdriver.ChromeOptions()
@@ -89,6 +147,8 @@ class Driver:
             make_game_button = WebDriverWait(self.driver, 10).until(
                 EC.presence_of_element_located((By.ID, 'five')))
             make_game_button.click()
+
+            self.close_pop_up()
 
         except WebDriverException as e:
             print("Exception occurred while interacting with the element: ", e)
@@ -232,28 +292,87 @@ class Driver:
         except Exception as e:
             print('Could not click the cookie button', e)
 
+    def close_pop_up(self):
+        try:
+            pop_up_button = WebDriverWait(self.driver, 5).until(
+                EC.element_to_be_clickable(
+                    (By.XPATH, '//div[@id=\'beamerAnnouncementSnippet\']')
+                )
+            ).click()
+        except Exception as e:
+            print('Could not click pop up button', e)
+
+
     def create_bamboozle(self, url, EMAIL, PASSWORD, title, vocabs):
         self.sign_in(url, EMAIL, PASSWORD)
         self.create_game(title)
         self.create_game_part_two(vocabs)
 
-    def create_quiz(self, vocab_words, API_KEY):
+    def create_quiz(self, vocab_words, API_KEY, email):
         prompt = create_prompt(vocab_words)
         response = generate_esl_quiz(API_KEY, prompt, max_tokens=550)
         path = create_a_word_document(response)
-        send_email_with_attachment(path)
+        send_email_with_attachment(path, email)
 
 
-    def create_word_search2(self, vocab):
-        puzzle = create_word_search(vocab)
-        send_email_with_attachment(puzzle)
+    def create_word_search(self, vocabs, email):
+        puzzle = make_word_search(vocabs)
+        send_email_with_attachment(puzzle, email)
 
     def close(self):
         self.driver.quit()
 
-# main webpage
+@app.route('/login', methods=('GET', 'POST'))
+def login():
+    if request.method == 'POST':
+        username = request.form.get('username')
+        password = request.form.get('password')
+
+        #here is where statimethod comes in. the class does not need to be instantiated first?
+        user = User.verify_user(username, password)
+
+        if user:
+            login_user(user)
+            flash('You are now logged in', 'success')
+            print("Flash message set: You are now logged in")
+            return redirect(url_for('book_unit'))
+        else:
+            return redirect(url_for('register'))
+
+    return render_template('login.html')
+
+
+@app.route('/register', methods=('GET', 'POST'))
+def register():
+    if request.method == 'POST':
+        username = request.form.get('username')
+        password = request.form.get('password')
+        email = request.form.get('email')
+
+
+        if username and password and email:
+            User.add_user(username, password, email)
+            flash('You have just registered', 'success')
+            return redirect(url_for('login'))
+        else:
+            flash('Missing username, password, or email.', 'danger')
+            return redirect(url_for('login'))
+
+    return render_template('register.html')
+
+@app.route('/logout')
+@login_required
+def logout():
+    logout_user()
+    flash('You have just logged out', 'success')
+    return redirect(url_for('login'))
+
+
+# main webpag
 @app.route('/', methods=['GET', 'POST'])
+@login_required
 def book_unit():
+    email = current_user.email
     selected_book, selected_unit, combined_vocab = setup_bookunit()
     try:
         book_to_units, books, kg_vocab = setup_function()
@@ -270,15 +389,25 @@ def book_unit():
         session['selected_unit'] = selected_unit
 
         if request.form['action'] == 'bamboozle':
+            print('1')
             vocab_words = request.form.get('vocab', '')
-            # vocabs = vocab_words.split(', ') if vocab_words else []
+            if vocab_words:
+                print('2')
+                print(vocab_words)
+                print(type(vocab_words))
+                flash('Creating Bamboozle', 'info')
+                # vocabs = vocab_words.split(', ') if vocab_words else []
 
             title = request.form.get('bamboozleTitle', '')
+            print('3')
             return handle_bamboozle(vocab_words, title, books, book_to_units, kg_vocab, selected_book, selected_unit)
 
         elif request.form['action'] == 'reviewQuiz':
             vocabs = request.form.get('vocab', '')
-            return handle_review_quiz(vocabs, books, kg_vocab, book_to_units, selected_book, selected_unit)
+            if vocabs:
+                flash('Creating Review Quiz', 'info')
+
+            return handle_review_quiz(vocabs, books, kg_vocab, book_to_units, selected_book, selected_unit, email)
 
         elif request.form['action'] == 'ShowVocab':
 
@@ -320,14 +449,16 @@ def book_unit():
 
 
         elif request.form['action'] == "wordSearch":
+            print(f"Flash messages: {session.get('_flashes', [])}")
+
             vocabs = request.form.get('vocab')
+            # remove spacing for wordsearch to work properly
+            compress_vocab = vocabs.replace(' ', '')
+            if compress_vocab:
+                flash('Creating Word Search!', 'info')
 
-            local_driver = Driver()
-            word_search_thread = threading.Thread(target=local_driver.create_word_search2, args=(vocabs,))
-            word_search_thread.start()
+                return handle_wordsearch(vocabs=compress_vocab, books=books, book_to_units=book_to_units, kg_vocab=kg_vocab, selected_book=selected_book, selected_unit=selected_unit, email=email)
 
-            return render_template('book_unit.html', vocab=vocabs, books=books, kg_vocab=kg_vocab, book_to_units=book_to_units,
-                                   selected_book=selected_book, selected_unit=selected_unit)
 
     return render_template('book_unit.html', vocab=combined_vocab, books=books, book_to_units=book_to_units, kg_vocab=kg_vocab, selected_book=selected_book, selected_unit=selected_unit)
 
@@ -359,25 +490,75 @@ def handle_bamboozle(vocab_words, bamboozle_title, books, book_to_units, kg_voca
         return render_template('book_unit.html', error="Vocabulary is required.", books=books, book_to_units=book_to_units, kg_vocab=kg_vocab, selected_book=selected_book, selected_unit=selected_unit)
     # Split vocab words into a list
     vocabs = vocab_words.split(', ')
-    # Initialize Driver and start bamboozle thread
-    local_driver = Driver()
-    thread = threading.Thread(target=local_driver.create_bamboozle,
-                              args=(url, EMAIL, PASSWORD, bamboozle_title, vocabs))
-    thread.start()
+    print('split:', vocabs)
+
+    def run_bamboozle(driver, url, EMAIL, PASSWORD, bamboozle_title, vocabs):
+        try:
+            driver.create_bamboozle(url, EMAIL, PASSWORD, bamboozle_title, vocabs)
+        except Exception as e:
+            print(e)
+        finally:
+            driver.close()
+
+    if vocabs:
+        driver = Driver()
+        thread = threading.Thread(target=run_bamboozle,
+                                  args=(driver, url, EMAIL, PASSWORD, bamboozle_title, vocabs))
+        thread.start()
+
     # Return the template with the updated vocabulary
     return render_template('book_unit.html',  vocab=vocab_words, books=books, book_to_units=book_to_units, kg_vocab=kg_vocab, selected_book=selected_book, selected_unit=selected_unit)
 
-def handle_review_quiz(vocabs, books, kg_vocab, book_to_units, selected_book, selected_unit):
+def handle_review_quiz(vocabs, books, kg_vocab, book_to_units, selected_book, selected_unit, email):
     if not vocabs:
         return render_template('book_unit.html', error="Vocabulary is required.", books=books, kg_vocab=kg_vocab,
                                book_to_units=book_to_units, selected_book=selected_book, selected_unit=selected_unit)
 
-    local_driver = Driver()
-    quiz_thread = threading.Thread(target=local_driver.create_quiz, args=(vocabs, API_KEY))
-    quiz_thread.start()
+    def create_review_quiz(driver, vocabs, API_KEY, email):
+        try:
+            driver.create_quiz(vocabs, API_KEY, email)
+        except Exception as e:
+            print(e)
+        finally:
+            driver.close()
+
+    if vocabs:
+        driver = Driver()
+        quiz_thread = threading.Thread(target=create_review_quiz, args=(driver, vocabs, API_KEY, email))
+        quiz_thread.start()
+
 
     return render_template('book_unit.html', vocab=vocabs, books=books, book_to_units=book_to_units, kg_vocab=kg_vocab,
                            selected_book=selected_book, selected_unit=selected_unit)
+
+
+def handle_wordsearch(vocabs, books, kg_vocab, book_to_units, selected_book, selected_unit, email):
+    if not vocabs:
+        return render_template('book_unit.html', error="Vocabulary is required.", books=books, kg_vocab=kg_vocab,
+                               book_to_units=book_to_units,
+                               selected_book=selected_book, selected_unit=selected_unit)
+
+    def run_word_search(driver, vocabs, email):
+        try:
+            driver.create_word_search(vocabs, email)
+        except Exception as e:
+            print(e)
+
+        finally:
+            driver.close()
+
+
+    if vocabs:
+        driver = Driver()
+        word_search_thread = threading.Thread(target=run_word_search, args=(driver, vocabs, email))
+        word_search_thread.start()
+
+
+    return render_template('book_unit.html', vocab=vocabs, books=books, kg_vocab=kg_vocab, book_to_units=book_to_units,
+                           selected_book=selected_book, selected_unit=selected_unit)
+
+
+
 
 url = 'https://www.baamboozle.com/games/create'
 
@@ -432,8 +613,10 @@ def generate_esl_quiz(API_KEY, prompt, max_tokens=550):
     except Exception as e:
         return f"An error occurred: {e}"
 
-def create_word_search(vocab):
+def make_word_search(vocab):
+    print(vocab)
     puzzle = WordSearch(vocab)
+    puzzle.show()
     filename = 'word_search.pdf'
     puzzle.save(filename)
 
@@ -449,10 +632,12 @@ def create_a_word_document(text):
     path = os.path.abspath(filename)
     return path
 
-def send_email_with_attachment(file_path):
+def send_email_with_attachment(file_path, email):
     send_from = E_NAME
     password = E_PASS
-    send_to = E_NAME
+    # send_to = E_NAME
+    # email = USER_EMAIL.get('email', None)
+    # email = session.get('email')
     subject = f'Quiz'
     body = ':)'
     file_path = file_path
@@ -466,7 +651,9 @@ def send_email_with_attachment(file_path):
         # Create the email
         msg = MIMEMultipart()
         msg['From'] = send_from
-        msg['To'] = send_to
+        # msg['To'] = send_to
+        msg['To'] = email
+
         msg['Subject'] = subject
 
         # Attach the body with the msg instance
@@ -494,6 +681,7 @@ def send_email_with_attachment(file_path):
             print("Deleting the document...")
             os.remove(file_path)
             print(f"Document {file_path} deleted successfully.")
+
         except Exception as e:
             print(f"Error deleting file: {e}")
 
@@ -501,6 +689,7 @@ def send_email_with_attachment(file_path):
 
 if __name__ == '__main__':
     app.run(debug=True, port=5001, use_reloader=False)
+
 
 #finished :)
 
