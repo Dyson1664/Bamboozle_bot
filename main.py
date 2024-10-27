@@ -47,54 +47,164 @@ login_manager.login_view = 'login'
 
 import psycopg2
 
+db_5.create_login_db()
+
+
 # os.environ["GOOGLE_CHROME_BIN"] = r"C:\Users\PC\Downloads\chrome-win64 (3)\chrome-win64\chrome.exe"
 
 # os.environ["CHROMEDRIVER_PATH"] = r"C:\Users\PC\Downloads\chromedriver-win64 (3)\chromedriver-win64\chromedriver.exe"
+from flask_login import UserMixin
+from werkzeug.security import check_password_hash
+import sqlite3
+
+
+
+from cryptography.fernet import Fernet
+#run once and made only one time
+def generate_key():
+    # Generate a key for encryption
+    key = Fernet.generate_key()
+    # Write the key to a file
+    with open('secret.key', 'wb') as key_file:
+        key_file.write(key)
+
+
+def load_key():
+    # Load the previously generated key
+    return open('secret.key', 'rb').read()
+
+# Load the key
+key = load_key()
+# Create a Fernet cipher object
+cipher_suite = Fernet(key)
+
 
 @login_manager.user_loader
 def load_user(user_id):
-    print(User.check_user(int(user_id)))
     return User.check_user(int(user_id))
 
+
 class User(UserMixin):
-    def __init__(self, id, username, password, email):
+    def __init__(self, id, username, password, personal_email, bamboozle_email, bamboozle_password):
         self.id = id
         self.username = username
         self.password = password
-        self.email = email
+        self.personal_email = personal_email
+        self.bamboozle_email = bamboozle_email
+        self.bamboozle_password = bamboozle_password
 
     @staticmethod
-    def add_user(username, password, email):
+    def add_user(username, password, personal_email, bamboozle_email, bamboozle_password):
         hashed_password = generate_password_hash(password)
-        with db_5.db_connection() as conn:
-            with conn.cursor() as cur:
-                cur.execute('INSERT INTO users (username, password, email) VALUES (%s, %s, %s)', (username, hashed_password, email))
-                conn.commit()
+
+        if bamboozle_password:
+            encrypted_baamboozle_password = cipher_suite.encrypt(bamboozle_password.encode()).decode()
+        else:
+            encrypted_baamboozle_password = None
+
+
+        with sqlite3.connect('vocabulary.db2') as conn:
+            cur = conn.cursor()
+            insert = '''
+            INSERT INTO users (username, password, personal_email, bamboozle_email, bamboozle_password)
+            VALUES (?, ?, ?, ?, ?)
+            '''
+            cur.execute(insert, (username, hashed_password, personal_email, bamboozle_email, encrypted_baamboozle_password))
+            conn.commit()
+            print('User added successfully.')
 
     @staticmethod
     def check_user(user_id):
-        with db_5.db_connection() as conn:
-            with conn.cursor() as cur:
-                cur.execute('SELECT * FROM users WHERE id = %s', (user_id,))
-                user = cur.fetchone()
+        with sqlite3.connect('vocabulary.db2') as conn:
+            cur = conn.cursor()
+            cur.execute('SELECT * FROM users WHERE id = ?', (user_id,))
+            user = cur.fetchone()
 
         if user:
-            user_object = User(id=user[0], username=user[1], password=[2], email=user[3])
+            if user[5]:
+                decrypted_baamboozle_password = cipher_suite.decrypt(user[5].encode()).decode()
+            else:
+                decrypted_baamboozle_password = None
+
+            user_object = User(
+                id=user[0],
+                username=user[1],
+                password=user[2],
+                personal_email=user[3],
+                bamboozle_email=user[4],
+                bamboozle_password=decrypted_baamboozle_password
+            )
             return user_object
         return None
 
     @staticmethod
     def verify_user(username, password):
-        with db_5.db_connection() as conn:
-            with conn.cursor() as cur:
-                cur.execute('SELECT * FROM users WHERE username = %s', (username,))
-                user = cur.fetchone()
+        with sqlite3.connect('vocabulary.db2') as conn:
+            cur = conn.cursor()
+            cur.execute('SELECT * FROM users WHERE username = ?', (username,))
+            user = cur.fetchone()
 
         if user and check_password_hash(user[2], password):
-            return User(id=user[0], username=user[1], password=[2], email=user[3])
-# DO I NEED TO RETURN THE FULL USER. YES BUT IS THERE A FASTER WAY?
+            if user[5]:
+                decrypted_baamboozle_password = cipher_suite.decrypt(user[5].encode()).decode()
+            else:
+                decrypted_baamboozle_password = None
+            return User(
+                id=user[0],
+                username=user[1],
+                password=user[2],
+                personal_email=user[3],
+                bamboozle_email=user[4],
+                bamboozle_password=decrypted_baamboozle_password
+            )
         return None
 
+
+from selenium import webdriver
+from webdriver_manager.microsoft import EdgeChromiumDriverManager
+
+
+# class Driver:
+#     def __init__(self):
+#         options = webdriver.ChromeOptions()
+#         options.add_argument('--headless=old')
+#         options.add_argument('--disable-gpu')
+#         options.add_argument('--no-sandbox')
+#         options.add_argument('--disable-dev-shm-usage')
+#         options.add_argument('--window-size=1920,1080')
+#
+#         # Specify the ChromeDriver version explicitly
+#         self.driver = webdriver.Chrome(
+#             ChromeDriverManager().install(), options=options
+#         )
+        # chrome_options = webdriver.ChromeOptions()
+        # chrome_options.binary_location = os.environ.get("GOOGLE_CHROME_BIN")
+        # chrome_options.add_argument("--headless")
+        # chrome_options.add_argument('--start-maximized')
+        # chrome_options.add_argument("--disable-dev-shm-usage")
+        # chrome_options.add_argument("--no-sandbox")
+        # self. driver = webdriver.Chrome(options=chrome_options)
+
+        # options = webdriver.ChromeOptions()
+        # #https://stackoverflow.com/questions/78996364/chrome-129-headless-shows-blank-window
+        # #use old for now because new update has a bug
+        # options.add_argument('--headless=old')
+        # options.add_argument('--disable-gpu')
+        # options.add_argument('--no-sandbox')
+        # options.add_argument('--disable-dev-shm-usage')
+        # options.add_argument('--window-size=1920,1080')
+        # options.add_argument('--user-agent=Mozilla/5.0 (Windows NT 10.0; Win64; x64) '
+        #                      'AppleWebKit/537.36 (KHTML, like Gecko) '
+        #                      'Chrome/94.0.4606.81 Safari/537.36')
+        # options.add_argument('--disable-search-engine-choice-screen')
+        # options.add_argument('--disable-extensions')
+        # options.add_argument('--allow-running-insecure-content')
+        # options.add_argument('--ignore-certificate-errors')
+        # options.add_argument('--disable-blink-features=AutomationControlled')
+        # options.add_argument('--enable-chrome-browser-cloud-management')  # Added flag
+        #
+        # # self.driver = webdriver.Chrome(service=ChromeService(ChromeDriverManager().install()), options=options)
+        # self.driver = webdriver.Chrome(options=options)
 
 class Driver:
     def __init__(self):
@@ -107,14 +217,23 @@ class Driver:
         # self. driver = webdriver.Chrome(options=chrome_options)
 
         options = webdriver.ChromeOptions()
-        options.add_argument('--headless=new')
-        options.add_argument('--ignore-certificate-errors')
-        options.add_argument('--disable-dev-shm-usage')
+        # https://stackoverflow.com/questions/78996364/chrome-129-headless-shows-blank-window
+        # use old for now because new update has a bug
+        options.add_argument('--headless=old')
         options.add_argument('--disable-gpu')
+        options.add_argument('--no-sandbox')
+        options.add_argument('--disable-dev-shm-usage')
+        options.add_argument('--window-size=1920,1080')
+        options.add_argument('--user-agent=Mozilla/5.0 (Windows NT 10.0; Win64; x64) '
+                             'AppleWebKit/537.36 (KHTML, like Gecko) '
+                             'Chrome/94.0.4606.81 Safari/537.36')
+        options.add_argument('--disable-extensions')
+        options.add_argument('--allow-running-insecure-content')
+        options.add_argument('--ignore-certificate-errors')
+        options.add_argument('--disable-blink-features=AutomationControlled')
 
-        self.driver = webdriver.Chrome(service=ChromeService(ChromeDriverManager().install()), options=options)
-
-
+        # self.driver = webdriver.Chrome(service=ChromeService(ChromeDriverManager().install()), options=options)
+        self.driver = webdriver.Chrome(options=options)
 
     def sign_in(self, url, email, password):
         self.driver.get(url)
@@ -154,7 +273,7 @@ class Driver:
             print("Exception occurred while interacting with the element: ", e)
 
     #loop though adding vocab and clicking pictures
-    def create_game_part_two(self, vocabs):
+    def create_game_part_two(self, vocabs, email):
         try:
             image_library_button_xpath = "//div[@id='question-form']//button[@type='button']"
             image_library_button = WebDriverWait(self.driver, 20).until(
@@ -187,7 +306,10 @@ class Driver:
             WebDriverWait(self.driver, 20).until(
                 EC.element_to_be_clickable((By.XPATH, close_game_button))
             ).click()
+            # email = user.email
+            socketio.emit('email_sent', {'message': f'Bamboozle made for account with email: {email}!'})
             print('Bamboozle made')
+
 
         except WebDriverException as e:
             print("Exception occurred while interacting with the element: ", e)
@@ -255,7 +377,6 @@ class Driver:
             ).click()
 
             try:
-
                 sixth_image = WebDriverWait(self.driver, 15).until(
                     EC.element_to_be_clickable(
                         (By.CSS_SELECTOR, "div.giphy-gif:nth-of-type(6) img.giphy-gif-img.giphy-img-loaded"))
@@ -281,13 +402,15 @@ class Driver:
                     (By.CSS_SELECTOR, ".js-cookie-consent-agree.cookie-consent__agree.btn.btn-primaryed"))
             )
             cookie_button.click()
+            print('Cookies closed')
 
-            close_gpt = WebDriverWait(self.driver, 5).until(
-                EC.element_to_be_clickable(
-                    (By.XPATH, "//*[@id=\"beamerAnnouncementBar\"]/div[2]/div[2]")
-                )
-            )
-            close_gpt.click()
+
+            # close_gpt = WebDriverWait(self.driver, 5).until(
+            #     EC.element_to_be_clickable(
+            #         (By.XPATH, "//*[@id=\"beamerAnnouncementBar\"]/div[2]/div[2]")
+            #     )
+            # )
+            # close_gpt.click()
 
         except Exception as e:
             print('Could not click the cookie button', e)
@@ -303,21 +426,23 @@ class Driver:
             print('Could not click pop up button', e)
 
 
-    def create_bamboozle(self, url, EMAIL, PASSWORD, title, vocabs):
-        self.sign_in(url, EMAIL, PASSWORD)
+    def create_bamboozle(self, url, email, password, title, vocabs):
+        self.sign_in(url, email, password)
         self.create_game(title)
-        self.create_game_part_two(vocabs)
+        self.create_game_part_two(vocabs, email)
 
     def create_quiz(self, vocab_words, API_KEY, email):
+        quiz_variable = 'Review Quiz'
         prompt = create_prompt(vocab_words)
         response = generate_esl_quiz(API_KEY, prompt, max_tokens=550)
-        path = create_a_word_document(response)
-        send_email_with_attachment(path, email)
+        word_s = create_a_word_document(response)
+        send_email_with_attachment(email, word_s, quiz_variable)
 
 
     def create_word_search(self, vocabs, email):
-        puzzle = make_word_search(vocabs)
-        send_email_with_attachment(puzzle, email)
+        wordsearch_variable = 'Wordsearch'
+        wordsearch_path = make_word_search(vocabs)
+        send_email_with_attachment(email, wordsearch_path, wordsearch_variable)
 
     def close(self):
         self.driver.quit()
@@ -328,18 +453,18 @@ def login():
         username = request.form.get('username')
         password = request.form.get('password')
 
-        #here is where statimethod comes in. the class does not need to be instantiated first?
         user = User.verify_user(username, password)
 
         if user:
             login_user(user)
             flash('You are now logged in', 'success')
-            print("Flash message set: You are now logged in")
             return redirect(url_for('book_unit'))
         else:
-            return redirect(url_for('register'))
+            flash('Invalid credentials. Please try again or register.', 'danger')
+            return redirect(url_for('login'))
 
     return render_template('login.html')
+
 
 
 @app.route('/register', methods=('GET', 'POST'))
@@ -347,18 +472,20 @@ def register():
     if request.method == 'POST':
         username = request.form.get('username')
         password = request.form.get('password')
-        email = request.form.get('email')
+        personal_email = request.form.get('personal_email')
+        bamboozle_email = request.form.get('bamboozle_email') or None
+        bamboozle_password = request.form.get('bamboozle_password') or None
 
-
-        if username and password and email:
-            User.add_user(username, password, email)
-            flash('You have just registered', 'success')
+        if username and password and personal_email:
+            User.add_user(username, password, personal_email, bamboozle_email, bamboozle_password)
+            flash('Registration successful!', 'success')
             return redirect(url_for('login'))
         else:
-            flash('Missing username, password, or email.', 'danger')
-            return redirect(url_for('login'))
+            flash('All fields are required.', 'danger')
+            return redirect(url_for('register'))
 
     return render_template('register.html')
+
 
 @app.route('/logout')
 @login_required
@@ -372,7 +499,9 @@ def logout():
 @app.route('/', methods=['GET', 'POST'])
 @login_required
 def book_unit():
-    email = current_user.email
+    email = current_user.personal_email
+    bamboozle_email = current_user.bamboozle_email
+    bamboozle_password = current_user.bamboozle_password
     selected_book, selected_unit, combined_vocab = setup_bookunit()
     try:
         book_to_units, books, kg_vocab = setup_function()
@@ -400,7 +529,7 @@ def book_unit():
 
             title = request.form.get('bamboozleTitle', '')
             print('3')
-            return handle_bamboozle(vocab_words, title, books, book_to_units, kg_vocab, selected_book, selected_unit)
+            return handle_bamboozle(vocab_words, title, books, book_to_units, kg_vocab, selected_book, selected_unit, bamboozle_email, bamboozle_password)
 
         elif request.form['action'] == 'reviewQuiz':
             vocabs = request.form.get('vocab', '')
@@ -457,7 +586,7 @@ def book_unit():
             if compress_vocab:
                 flash('Creating Word Search!', 'info')
 
-                return handle_wordsearch(vocabs=compress_vocab, books=books, book_to_units=book_to_units, kg_vocab=kg_vocab, selected_book=selected_book, selected_unit=selected_unit, email=email)
+                return handle_wordsearch(vocabs=compress_vocab, normal_vocabs=vocabs, books=books, book_to_units=book_to_units, kg_vocab=kg_vocab, selected_book=selected_book, selected_unit=selected_unit, email=email)
 
 
     return render_template('book_unit.html', vocab=combined_vocab, books=books, book_to_units=book_to_units, kg_vocab=kg_vocab, selected_book=selected_book, selected_unit=selected_unit)
@@ -485,16 +614,19 @@ def setup_bookunit():
 
 
 
-def handle_bamboozle(vocab_words, bamboozle_title, books, book_to_units, kg_vocab, selected_book, selected_unit):
+def handle_bamboozle(vocab_words, bamboozle_title, books, book_to_units, kg_vocab, selected_book, selected_unit, bamboozle_email, bamboozle_password):
     if not vocab_words:
         return render_template('book_unit.html', error="Vocabulary is required.", books=books, book_to_units=book_to_units, kg_vocab=kg_vocab, selected_book=selected_book, selected_unit=selected_unit)
     # Split vocab words into a list
     vocabs = vocab_words.split(', ')
     print('split:', vocabs)
 
-    def run_bamboozle(driver, url, EMAIL, PASSWORD, bamboozle_title, vocabs):
+    def run_bamboozle(driver, url, bamboozle_email, bamboozle_password, bamboozle_title, vocabs):
         try:
-            driver.create_bamboozle(url, EMAIL, PASSWORD, bamboozle_title, vocabs)
+            if bamboozle_email and bamboozle_password:
+                driver.create_bamboozle(url, bamboozle_email, bamboozle_password, bamboozle_title, vocabs)
+            else:
+                flash('Baamboozle credentials are missing. Please update your profile.', 'danger')
         except Exception as e:
             print(e)
         finally:
@@ -503,7 +635,7 @@ def handle_bamboozle(vocab_words, bamboozle_title, books, book_to_units, kg_voca
     if vocabs:
         driver = Driver()
         thread = threading.Thread(target=run_bamboozle,
-                                  args=(driver, url, EMAIL, PASSWORD, bamboozle_title, vocabs))
+                                  args=(driver, url, bamboozle_email, bamboozle_password, bamboozle_title, vocabs))
         thread.start()
 
     # Return the template with the updated vocabulary
@@ -515,6 +647,7 @@ def handle_review_quiz(vocabs, books, kg_vocab, book_to_units, selected_book, se
                                book_to_units=book_to_units, selected_book=selected_book, selected_unit=selected_unit)
 
     def create_review_quiz(driver, vocabs, API_KEY, email):
+        print(f'Vocabs**********: {vocabs}')
         try:
             driver.create_quiz(vocabs, API_KEY, email)
         except Exception as e:
@@ -532,13 +665,14 @@ def handle_review_quiz(vocabs, books, kg_vocab, book_to_units, selected_book, se
                            selected_book=selected_book, selected_unit=selected_unit)
 
 
-def handle_wordsearch(vocabs, books, kg_vocab, book_to_units, selected_book, selected_unit, email):
+def handle_wordsearch(vocabs, normal_vocabs, books, kg_vocab, book_to_units, selected_book, selected_unit, email):
     if not vocabs:
         return render_template('book_unit.html', error="Vocabulary is required.", books=books, kg_vocab=kg_vocab,
                                book_to_units=book_to_units,
                                selected_book=selected_book, selected_unit=selected_unit)
 
     def run_word_search(driver, vocabs, email):
+        print(f'Vocabs*******: {vocabs}')
         try:
             driver.create_word_search(vocabs, email)
         except Exception as e:
@@ -554,7 +688,7 @@ def handle_wordsearch(vocabs, books, kg_vocab, book_to_units, selected_book, sel
         word_search_thread.start()
 
 
-    return render_template('book_unit.html', vocab=vocabs, books=books, kg_vocab=kg_vocab, book_to_units=book_to_units,
+    return render_template('book_unit.html', vocab=normal_vocabs, books=books, kg_vocab=kg_vocab, book_to_units=book_to_units,
                            selected_book=selected_book, selected_unit=selected_unit)
 
 
@@ -619,9 +753,10 @@ def make_word_search(vocab):
     puzzle.show()
     filename = 'word_search.pdf'
     puzzle.save(filename)
+    wordsearch_path = os.path.abspath(filename)
 
     # location = puzzle.save(path=r"C:\Users\PC\Desktop\work_webpage\Bamboozle_ESL-game\word_search.pdf")
-    return os.path.abspath(filename)
+    return wordsearch_path
 
 
 def create_a_word_document(text):
@@ -632,64 +767,112 @@ def create_a_word_document(text):
     path = os.path.abspath(filename)
     return path
 
-def send_email_with_attachment(file_path, email):
-    send_from = E_NAME
-    password = E_PASS
-    # send_to = E_NAME
-    # email = USER_EMAIL.get('email', None)
-    # email = session.get('email')
-    subject = f'Quiz'
-    body = ':)'
-    file_path = file_path
-    server = None
-    try:
-        # Set up the SMTP server
-        server = smtplib.SMTP('smtp.gmail.com', 587)
-        server.starttls()
-        server.login(send_from, password)
+from flask_socketio import SocketIO, emit
 
-        # Create the email
-        msg = MIMEMultipart()
-        msg['From'] = send_from
-        # msg['To'] = send_to
-        msg['To'] = email
+socketio = SocketIO(app)
 
-        msg['Subject'] = subject
+@socketio.on('connect')
+def handle_connection():
+    print('Client connected')
 
-        # Attach the body with the msg instance
-        msg.attach(MIMEText(body, 'plain'))
 
-        # Open the file to be sent
-        with open(file_path, "rb") as attachment:
-            part = MIMEBase('application', 'octet-stream')
-            part.set_payload(attachment.read())
+
+import smtplib
+from email.mime.multipart import MIMEMultipart
+from email.mime.base import MIMEBase
+from email.mime.text import MIMEText
+from email import encoders
+import os
+from flask_socketio import SocketIO, emit
+import mimetypes
+import shutil
+
+
+def send_email_with_attachment(to_email, path, content, file_path=None):
+
+    # Your Gmail account credentials from environment variables
+    from_email = os.getenv('E_NAME')  # Your Gmail email (from .env)
+    password = os.getenv('E_PASS')  # Your Gmail App Password (from .env)
+
+    # Create the email message object
+    msg = MIMEMultipart()
+    msg['From'] = from_email
+    msg['To'] = to_email
+    msg['Subject'] = f"Here is your {content} :)"  # Set subject based on the content type
+
+    # Attach the body content to the email (plain text)
+    body_content = f"Please find the attached {content}."
+    msg.attach(MIMEText(body_content, 'plain'))
+
+    # Use the provided path to the file
+    file_path = path if path else file_path
+
+    # Attach a file if the path is provided
+    if file_path:
+        try:
+            # Detect MIME type based on file extension
+            mime_type, _ = mimetypes.guess_type(file_path)
+            if mime_type is None:
+                mime_type = 'application/octet-stream'  # Default for binary files
+
+            # Open the file and attach it
+            with open(file_path, "rb") as attachment:
+                part = MIMEBase(*mime_type.split("/"))
+                part.set_payload(attachment.read())
+
+            # Encode the file payload in base64
             encoders.encode_base64(part)
-            part.add_header('Content-Disposition', "attachment; filename= %s" % os.path.basename(file_path))
+
+            # Add header to the attachment
+            part.add_header(
+                'Content-Disposition',
+                f'attachment; filename="{os.path.basename(file_path)}"'
+            )
+
+            # Attach the file to the email
             msg.attach(part)
 
+        except Exception as e:
+            print(f'Failed to attach file: {e}')
+            socketio.emit('email_error', {'message': f'Failed to attach file: {str(e)}'})
+
+    try:
+        # Set up the Gmail SMTP server
+        server = smtplib.SMTP('smtp.gmail.com', 587)
+        server.starttls()  # Secure the connection
+
+        # Login to the Gmail account
+        server.login(from_email, password)
+
         # Send the email
-        server.send_message(msg)
+        server.sendmail(from_email, to_email, msg.as_string())
+
+        # If email sent successfully, emit a WebSocket event
+        socketio.emit('email_sent', {'message': f'{content} sent successfully to {to_email}'})
+        print(f'Email sent successfully to {to_email}')
 
     except Exception as e:
-        print(f"An error occurred: {e}")
+        # Emit a WebSocket event in case of failure
+        socketio.emit('email_error', {'message': f'Failed to send email to {to_email}. Error: {str(e)}'})
+        print(f'Failed to send email: {e}')
+
     finally:
-        if server:
-            server.quit()
+        # Close the connection to the server
+        server.quit()
 
-        # Attempt to delete the file
-        try:
-            print("Deleting the document...")
-            os.remove(file_path)
-            print(f"Document {file_path} deleted successfully.")
+        # Ensure the file gets deleted after sending the email
+        if file_path and os.path.exists(file_path):
+            try:
+                os.remove(file_path)
+                print(f'{file_path} deleted successfully.')
+            except Exception as e:
+                print(f'Error deleting file: {e}')
 
-        except Exception as e:
-            print(f"Error deleting file: {e}")
 
 
 
 if __name__ == '__main__':
-    app.run(debug=True, port=5001, use_reloader=False)
-
+    socketio.run(app, debug=True, port=5001, use_reloader=False, allow_unsafe_werkzeug=True)
 
 #finished :)
 

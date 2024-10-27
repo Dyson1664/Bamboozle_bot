@@ -7,6 +7,49 @@
     <!-- Bootstrap CSS -->
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="{{ url_for('static', filename='css/styles.css') }}">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.0.0/socket.io.js"></script>
+<script>
+    var socket = io.connect('http://' + document.domain + ':' + location.port);
+
+    // Queue to handle multiple email-sent messages
+    var messageQueue = [];
+    var showingMessage = false;
+
+    // Function to display the message and remove it after 5 seconds
+    function displayMessage() {
+        if (messageQueue.length > 0 && !showingMessage) {
+            showingMessage = true;
+            var message = messageQueue.shift();  // Get the first message from the queue
+
+            // Display the message in the email-status div
+            var emailStatusDiv = document.getElementById('email-status');
+            emailStatusDiv.innerText = message;
+            emailStatusDiv.classList.add('show');
+
+            // Clear the message after 5 seconds
+            setTimeout(function() {
+                emailStatusDiv.classList.remove('show');  // Hide the message
+                emailStatusDiv.innerText = '';  // Clear the message
+                showingMessage = false;  // Allow the next message to be shown
+                displayMessage();  // Check if there are more messages to show
+            }, 5000);
+        }
+    }
+
+    // Listen for the 'email_sent' event from the server
+    socket.on('email_sent', function(data) {
+        console.log('Received message:', data.message);  // Log the message to the console
+
+        // Add the received message to the queue
+        messageQueue.push(data.message);
+
+        // Try to display the message
+        displayMessage();
+    });
+
+</script>
+
+
   <style>
         body { padding-top: 40px; }
         .container { max-width: 400px; margin: auto; }
@@ -119,13 +162,18 @@
         {% with messages = get_flashed_messages(with_categories=true) %}
             {% if messages %}
                 {% for category, message in messages %}
-                    <div class="alert alert-{{ category }} alert-dismissible fade show" role="alert">
+                    <div class="alert alert-{{ category }} {% if category != 'info' %}alert-dismissible{% endif %} fade show" role="alert">
                         {{ message }}
-                        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                        {% if category != 'info' %}
+                            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                        {% endif %}
                     </div>
                 {% endfor %}
             {% endif %}
         {% endwith %}
+
+        <div id="email-status" ></div>
+
     </div>
 
     <div class="container">
@@ -190,5 +238,16 @@
             }, 5000); // Time in milliseconds (5000ms = 5 seconds)
         });
     </script>
+<script>
+    var socket = io.connect('http://' + document.domain + ':' + location.port);
+    socket.on('email_sent', function(data) {
+        console.log('Received message:', data.message);  // Log the message to the console
+
+        document.getElementById('email-status').innerText = data.message;
+    });
+</script>
+
+
+
     </body>
 </html>

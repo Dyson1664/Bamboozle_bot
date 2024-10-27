@@ -1,6 +1,7 @@
 import sqlite3
 import psycopg2
 
+
 def create_db():
     conn = sqlite3.connect('vocabulary.db2')
     cursor = conn.cursor()
@@ -182,6 +183,63 @@ def get_all_books():
 
     conn.close()
     return books
+
+
+def create_login_db():
+    with sqlite3.connect('vocabulary.db2') as conn:
+        cur = conn.cursor()
+        insertion = '''
+        CREATE TABLE IF NOT EXISTS users (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        username TEXT NOT NULL UNIQUE,
+        password TEXT NOT NULL,
+        personal_email TEXT NOT NULL UNIQUE,
+        bamboozle_email TEXT ,
+        bamboozle_password TEXT 
+    ); 
+        '''
+        cur.execute(insertion)
+        conn.commit()
+        print('db created')
+# create_login_db()
+def alter_login_db():
+    with sqlite3.connect('vocabulary.db2') as conn:
+        cur = conn.cursor()
+
+        # Alter the users table to add a new column for the Bamboozle password
+        cur.execute('''
+        ALTER TABLE users
+        ADD COLUMN bamboozle_password TEXT;
+        ''')
+
+        conn.commit()
+
+# Call the function to alter the users table
+
+def drop_table():
+    with sqlite3.connect('vocabulary.db2') as conn:
+        cur = conn.cursor()
+        cur.execute('DROP TABLE IF EXISTS users;')
+        conn.commit()
+        print('Dropped')
+
+
+# drop_table()
+
+
+from werkzeug.security import generate_password_hash
+
+def add_user(username, password, personal_email, bamboozle_email, bamboozle_password):
+    hashed_password = generate_password_hash(password)
+    with sqlite3.connect('vocabulary.db2') as conn:
+        cur = conn.cursor()
+        insert = '''
+        INSERT INTO users (username, password, personal_email, bamboozle_email, bamboozle_password)
+        VALUES (?, ?, ?, ?, ?)
+        '''
+        cur.execute(insert, (username, hashed_password, personal_email, bamboozle_email, bamboozle_password))
+        conn.commit()
+        print('User added successfully.')
 
 
 def db_connection():
