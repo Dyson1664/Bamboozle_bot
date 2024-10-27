@@ -9,6 +9,7 @@ This Flask-based web application enhances educational processes by automating th
 - **Interactive Game Creation**: Uses a Selenium-based bot to automate the creation of Bamboozle games, pairing vocabulary words with images to enhance learning engagement.
 - **Content Generation with GPT**: Employs OpenAI's GPT to generate stories and comprehension questions which are then emailed directly to educators.
 - **Word Search Creation**: Automatically generates word searches from selected vocabulary, enhancing classroom learning experiences.
+- **User Authentication**: Includes a login feature for user authentication, ensuring that only registered users can access certain functionalities.
 
 ## Prerequisites
 
@@ -41,13 +42,19 @@ DATABASE_URL=your-database-url
 Replace each placeholder with your actual data.
 
 ### Update ChromeDriver Path
-Update the path to chromedriver.exe in the Driver class to match your system's ChromeDriver location.
+Update the path to `chromedriver.exe` in the `Driver` class to match your system's ChromeDriver location.
 
-### Running the Application
+## Running the Application
 After completing the installation and configuration, start the server by running:
+
 ```
 python app.py
 ```
+## User Authentication
+### Register
+Navigate to http://localhost:5000/register and enter a username, password, and email to create a new account.
+
+### Login
+Navigate to http://localhost:5000/login and enter your username and password to log in.
 
 Navigate to http://localhost:5000/ to access the application.
-
