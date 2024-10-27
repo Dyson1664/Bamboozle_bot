@@ -161,79 +161,59 @@ class User(UserMixin):
 
 
 from selenium import webdriver
-from webdriver_manager.microsoft import EdgeChromiumDriverManager
-
-
-# class Driver:
-#     def __init__(self):
-#         options = webdriver.ChromeOptions()
-#         options.add_argument('--headless=old')
-#         options.add_argument('--disable-gpu')
-#         options.add_argument('--no-sandbox')
-#         options.add_argument('--disable-dev-shm-usage')
-#         options.add_argument('--window-size=1920,1080')
-#
-#         # Specify the ChromeDriver version explicitly
-#         self.driver = webdriver.Chrome(
-#             ChromeDriverManager().install(), options=options
-#         )
-        # chrome_options = webdriver.ChromeOptions()
-        # chrome_options.binary_location = os.environ.get("GOOGLE_CHROME_BIN")
-        # chrome_options.add_argument("--headless")
-        # chrome_options.add_argument('--start-maximized')
-        # chrome_options.add_argument("--disable-dev-shm-usage")
-        # chrome_options.add_argument("--no-sandbox")
-        # self. driver = webdriver.Chrome(options=chrome_options)
-
-        # options = webdriver.ChromeOptions()
-        # #https://stackoverflow.com/questions/78996364/chrome-129-headless-shows-blank-window
-        # #use old for now because new update has a bug
-        # options.add_argument('--headless=old')
-        # options.add_argument('--disable-gpu')
-        # options.add_argument('--no-sandbox')
-        # options.add_argument('--disable-dev-shm-usage')
-        # options.add_argument('--window-size=1920,1080')
-        # options.add_argument('--user-agent=Mozilla/5.0 (Windows NT 10.0; Win64; x64) '
-        #                      'AppleWebKit/537.36 (KHTML, like Gecko) '
-        #                      'Chrome/94.0.4606.81 Safari/537.36')
-        # options.add_argument('--disable-search-engine-choice-screen')
-        # options.add_argument('--disable-extensions')
-        # options.add_argument('--allow-running-insecure-content')
-        # options.add_argument('--ignore-certificate-errors')
-        # options.add_argument('--disable-blink-features=AutomationControlled')
-        # options.add_argument('--enable-chrome-browser-cloud-management')  # Added flag
-        #
-        # # self.driver = webdriver.Chrome(service=ChromeService(ChromeDriverManager().install()), options=options)
-        # self.driver = webdriver.Chrome(options=options)
+from selenium.webdriver.chrome.service import Service
+from selenium.webdriver.chrome.options import Options
 
 class Driver:
     def __init__(self):
-        # chrome_options = webdriver.ChromeOptions()
-        # chrome_options.binary_location = os.environ.get("GOOGLE_CHROME_BIN")
-        # chrome_options.add_argument("--headless")
-        # chrome_options.add_argument('--start-maximized')
-        # chrome_options.add_argument("--disable-dev-shm-usage")
-        # chrome_options.add_argument("--no-sandbox")
-        # self. driver = webdriver.Chrome(options=chrome_options)
+        options = Options()
+        # Set the binary location to the one provided by the buildpack
+        options.binary_location = os.environ.get('GOOGLE_CHROME_SHIM', None)
 
-        options = webdriver.ChromeOptions()
-        # https://stackoverflow.com/questions/78996364/chrome-129-headless-shows-blank-window
-        # use old for now because new update has a bug
-        options.add_argument('--headless=old')
+        # Add your desired options
+        options.add_argument('--headless=new')  # Use 'new' headless mode for Chrome >= 109
         options.add_argument('--disable-gpu')
         options.add_argument('--no-sandbox')
         options.add_argument('--disable-dev-shm-usage')
         options.add_argument('--window-size=1920,1080')
-        options.add_argument('--user-agent=Mozilla/5.0 (Windows NT 10.0; Win64; x64) '
-                             'AppleWebKit/537.36 (KHTML, like Gecko) '
-                             'Chrome/94.0.4606.81 Safari/537.36')
         options.add_argument('--disable-extensions')
         options.add_argument('--allow-running-insecure-content')
         options.add_argument('--ignore-certificate-errors')
         options.add_argument('--disable-blink-features=AutomationControlled')
 
-        # self.driver = webdriver.Chrome(service=ChromeService(ChromeDriverManager().install()), options=options)
-        self.driver = webdriver.Chrome(options=options)
+        # Use the CHROMEDRIVER_PATH environment variable
+        chrome_service = Service(executable_path=os.environ.get('CHROMEDRIVER_PATH', None))
+        self.driver = webdriver.Chrome(service=chrome_service, options=options)
+
+#working
+# class Driver:
+#     def __init__(self):
+#         # chrome_options = webdriver.ChromeOptions()
+#         # chrome_options.binary_location = os.environ.get("GOOGLE_CHROME_BIN")
+#         # chrome_options.add_argument("--headless")
+#         # chrome_options.add_argument('--start-maximized')
+#         # chrome_options.add_argument("--disable-dev-shm-usage")
+#         # chrome_options.add_argument("--no-sandbox")
+#         # self. driver = webdriver.Chrome(options=chrome_options)
+#
+#         options = webdriver.ChromeOptions()
+#         # https://stackoverflow.com/questions/78996364/chrome-129-headless-shows-blank-window
+#         # use old for now because new update has a bug
+#         options.add_argument('--headless=old')
+#         options.add_argument('--disable-gpu')
+#         options.add_argument('--no-sandbox')
+#         options.add_argument('--disable-dev-shm-usage')
+#         options.add_argument('--window-size=1920,1080')
+#         options.add_argument('--user-agent=Mozilla/5.0 (Windows NT 10.0; Win64; x64) '
+#                              'AppleWebKit/537.36 (KHTML, like Gecko) '
+#                              'Chrome/94.0.4606.81 Safari/537.36')
+#         options.add_argument('--disable-extensions')
+#         options.add_argument('--allow-running-insecure-content')
+#         options.add_argument('--ignore-certificate-errors')
+#         options.add_argument('--disable-blink-features=AutomationControlled')
+#
+#         # self.driver = webdriver.Chrome(service=ChromeService(ChromeDriverManager().install()), options=options)
+#         self.driver = webdriver.Chrome(options=options)
 
     def sign_in(self, url, email, password):
         self.driver.get(url)
