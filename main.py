@@ -163,12 +163,20 @@ class User(UserMixin):
 from selenium import webdriver
 from selenium.webdriver.chrome.service import Service
 from selenium.webdriver.chrome.options import Options
+import sys
+
 
 class Driver:
     def __init__(self):
+        print('GOOGLE_CHROME_SHIM:', os.environ.get('GOOGLE_CHROME_SHIM'))
+        print('CHROMEDRIVER_PATH:', os.environ.get('CHROMEDRIVER_PATH'))
+        sys.stdout.flush()
+
         options = Options()
         # Set the binary location to the one provided by the buildpack
         options.binary_location = os.environ.get('GOOGLE_CHROME_SHIM', None)
+        if not options.binary_location:
+            raise Exception('GOOGLE_CHROME_SHIM not found in environment variables.')
 
         # Add your desired options
         options.add_argument('--headless=new')  # Use 'new' headless mode for Chrome >= 109
@@ -181,8 +189,12 @@ class Driver:
         options.add_argument('--ignore-certificate-errors')
         options.add_argument('--disable-blink-features=AutomationControlled')
 
-        # Use the CHROMEDRIVER_PATH environment variable
-        chrome_service = Service(executable_path=os.environ.get('CHROMEDRIVER_PATH', None))
+        chromedriver_path = os.environ.get('CHROMEDRIVER_PATH', None)
+        if not chromedriver_path:
+            raise Exception('CHROMEDRIVER_PATH not found in environment variables.')
+
+        chrome_service = Service(executable_path=chromedriver_path)
+
         self.driver = webdriver.Chrome(service=chrome_service, options=options)
 
 #working
@@ -195,7 +207,7 @@ class Driver:
 #         # chrome_options.add_argument("--disable-dev-shm-usage")
 #         # chrome_options.add_argument("--no-sandbox")
 #         # self. driver = webdriver.Chrome(options=chrome_options)
-#
+
 #         options = webdriver.ChromeOptions()
 #         # https://stackoverflow.com/questions/78996364/chrome-129-headless-shows-blank-window
 #         # use old for now because new update has a bug
@@ -211,7 +223,7 @@ class Driver:
 #         options.add_argument('--allow-running-insecure-content')
 #         options.add_argument('--ignore-certificate-errors')
 #         options.add_argument('--disable-blink-features=AutomationControlled')
-#
+
 #         # self.driver = webdriver.Chrome(service=ChromeService(ChromeDriverManager().install()), options=options)
 #         self.driver = webdriver.Chrome(options=options)
 
