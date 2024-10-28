@@ -168,9 +168,8 @@ import sys
 
 class Driver:
     def __init__(self):
-        print('GOOGLE_CHROME_SHIM:', os.environ.get('GOOGLE_CHROME_SHIM'))
-        print('CHROMEDRIVER_PATH:', os.environ.get('CHROMEDRIVER_PATH'))
-        sys.stdout.flush()
+
+        # sys.stdout.flush()
 
         options = Options()
         # Set the binary location to the one provided by the buildpack
@@ -194,6 +193,9 @@ class Driver:
             raise Exception('CHROMEDRIVER_PATH not found in environment variables.')
 
         chrome_service = Service(executable_path=chromedriver_path)
+
+        print('GOOGLE_CHROME_SHIM:', os.environ.get('GOOGLE_CHROME_SHIM'))
+        print('CHROMEDRIVER_PATH:', os.environ.get('CHROMEDRIVER_PATH'))
 
         self.driver = webdriver.Chrome(service=chrome_service, options=options)
 
