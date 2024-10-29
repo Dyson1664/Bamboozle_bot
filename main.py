@@ -895,8 +895,8 @@ def send_email_with_attachment(to_email, path, content, file_path=None):
 
 if __name__ == '__main__':
     # socketio.run(app, debug=True, port=5001, use_reloader=False, allow_unsafe_werkzeug=True)
-    socketio.run(app, debug=True)
-    # pass
+    # socketio.run(app, debug=True)
+    pass
 #finished :)
 
 
