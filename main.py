@@ -8,22 +8,17 @@ from selenium.webdriver.chrome.service import Service as ChromeService
 from webdriver_manager.chrome import ChromeDriverManager
 from time import sleep
 from sqlite3 import DatabaseError
+
 import db_5
 
-from openai import OpenAI
 from docx import Document
 from word_search_generator import WordSearch
 import threading
 
-import smtplib
-from email.mime.multipart import MIMEMultipart
-from email.mime.text import MIMEText
-from email.mime.base import MIMEBase
-from email import encoders
+
 
 from flask_login import UserMixin, login_user, LoginManager, login_required, logout_user, current_user
 from werkzeug.security import generate_password_hash, check_password_hash
-import psycopg2
 
 import os
 from dotenv import load_dotenv
@@ -37,7 +32,9 @@ E_NAME = os.getenv('E_NAME')
 
 app = Flask(__name__)
 app.secret_key = 'your_secret_key'
-client = OpenAI(api_key=os.environ['API_KEY'])
+
+# import openai
+# openai.api_key = API_KEY
 
 
 login_manager = LoginManager()
@@ -95,23 +92,39 @@ class User(UserMixin):
 
     @staticmethod
     def add_user(username, password, personal_email, bamboozle_email, bamboozle_password):
-        hashed_password = generate_password_hash(password)
+        # Check if email already exists
+        try:
+            with sqlite3.connect('vocabulary.db2') as conn:
+                cur = conn.cursor()
+                cur.execute('SELECT * FROM users WHERE personal_email = ?', (personal_email,))
+                existing_user = cur.fetchone()
 
-        if bamboozle_password:
-            encrypted_baamboozle_password = cipher_suite.encrypt(bamboozle_password.encode()).decode()
-        else:
-            encrypted_baamboozle_password = None
+            if existing_user:
+                print("User with this email already exists.")
+                return None
+
+            hashed_password = generate_password_hash(password)
+
+            if bamboozle_password:
+                encrypted_baamboozle_password = cipher_suite.encrypt(bamboozle_password.encode()).decode()
+            else:
+                encrypted_baamboozle_password = None
 
 
-        with sqlite3.connect('vocabulary.db2') as conn:
-            cur = conn.cursor()
-            insert = '''
-            INSERT INTO users (username, password, personal_email, bamboozle_email, bamboozle_password)
-            VALUES (?, ?, ?, ?, ?)
-            '''
-            cur.execute(insert, (username, hashed_password, personal_email, bamboozle_email, encrypted_baamboozle_password))
-            conn.commit()
-            print('User added successfully.')
+            with sqlite3.connect('vocabulary.db2') as conn:
+                cur = conn.cursor()
+                insert = '''
+                INSERT INTO users (username, password, personal_email, bamboozle_email, bamboozle_password)
+                VALUES (?, ?, ?, ?, ?)
+                '''
+                cur.execute(insert, (username, hashed_password, personal_email, bamboozle_email, encrypted_baamboozle_password))
+                conn.commit()
+                print('User added successfully.')
+                return True
+
+        except sqlite3.Error as e:
+            print(f"An error occurred: {e}")
+            return None
 
     @staticmethod
     def check_user(user_id):
@@ -178,7 +191,7 @@ class Driver:
             raise Exception('GOOGLE_CHROME_SHIM not found in environment variables.')
 
         # Add your desired options
-        options.add_argument('--headless=new')  # Use 'new' headless mode for Chrome >= 109
+        options.add_argument('--headless=old')  # Use 'new' headless mode for Chrome >= 109
         options.add_argument('--disable-gpu')
         options.add_argument('--no-sandbox')
         options.add_argument('--disable-dev-shm-usage')
@@ -425,10 +438,10 @@ class Driver:
         self.create_game(title)
         self.create_game_part_two(vocabs, email)
 
-    def create_quiz(self, vocab_words, API_KEY, email):
+    def create_quiz(self, vocab_words, email):
         quiz_variable = 'Review Quiz'
         prompt = create_prompt(vocab_words)
-        response = generate_esl_quiz(API_KEY, prompt, max_tokens=550)
+        response = generate_esl_quiz(prompt, max_tokens=550)
         word_s = create_a_word_document(response)
         send_email_with_attachment(email, word_s, quiz_variable)
 
@@ -471,11 +484,16 @@ def register():
         bamboozle_password = request.form.get('bamboozle_password') or None
 
         if username and password and personal_email:
-            User.add_user(username, password, personal_email, bamboozle_email, bamboozle_password)
-            flash('Registration successful!', 'success')
-            return redirect(url_for('login'))
+            user_created = User.add_user(username, password, personal_email, bamboozle_email, bamboozle_password)
+            if user_created:
+                flash('Registration successful!', 'success')
+                return redirect(url_for('login'))
+            else:
+                flash('User with this email already exists.', 'danger')
+                return redirect(url_for('register'))
+
         else:
-            flash('All fields are required.', 'danger')
+            flash('Username, password and personal email are required.', 'danger')
             return redirect(url_for('register'))
 
     return render_template('register.html')
@@ -640,10 +658,10 @@ def handle_review_quiz(vocabs, books, kg_vocab, book_to_units, selected_book, se
         return render_template('book_unit.html', error="Vocabulary is required.", books=books, kg_vocab=kg_vocab,
                                book_to_units=book_to_units, selected_book=selected_book, selected_unit=selected_unit)
 
-    def create_review_quiz(driver, vocabs, API_KEY, email):
-        print(f'Vocabs**********: {vocabs}')
+    def create_review_quiz(driver, vocabs, email):
+        print(f'Vocabs**********: {vocabs}, email: {email}')
         try:
-            driver.create_quiz(vocabs, API_KEY, email)
+            driver.create_quiz(vocabs, email)
         except Exception as e:
             print(e)
         finally:
@@ -651,7 +669,7 @@ def handle_review_quiz(vocabs, books, kg_vocab, book_to_units, selected_book, se
 
     if vocabs:
         driver = Driver()
-        quiz_thread = threading.Thread(target=create_review_quiz, args=(driver, vocabs, API_KEY, email))
+        quiz_thread = threading.Thread(target=create_review_quiz, args=(driver, vocabs, email))
         quiz_thread.start()
 
 
@@ -723,21 +741,22 @@ Please do not include the answers in the quiz. Aim to keep the total length of t
 2. Another question about the story.
 ... and so on."""
 
-def generate_esl_quiz(API_KEY, prompt, max_tokens=550):
-    prompt = prompt
 
-    client = OpenAI(api_key=API_KEY)
 
+def generate_esl_quiz(prompt, max_tokens=550):
     try:
+        from openai import OpenAI
+        client = OpenAI(api_key=API_KEY)
         response = client.chat.completions.create(
-            model="gpt-4",  # Specify the GPT-4 model
+            model="gpt-3.5-turbo",
             messages=[
                 {"role": "system", "content": "You are a skilled ESL teacher."},
                 {"role": "user", "content": prompt}
             ],
-            max_tokens=max_tokens
+            max_tokens=max_tokens,
+            temperature=0.7
         )
-        return response.choices[0].message.content
+        return response.choices[0].message.content.strip()
     except Exception as e:
         return f"An error occurred: {e}"
 
@@ -761,9 +780,18 @@ def create_a_word_document(text):
     path = os.path.abspath(filename)
     return path
 
-from flask_socketio import SocketIO, emit
+from flask_socketio import SocketIO
 
-socketio = SocketIO(app)
+ENVIRONMENT = os.getenv('ENVIRONMENT', 'development')
+
+if ENVIRONMENT == 'production':
+    # Production settings
+    async_mode = 'gevent'
+else:
+    # Development settings
+    async_mode = 'threading'
+
+socketio = SocketIO(app, async_mode=async_mode)
 
 @socketio.on('connect')
 def handle_connection():
@@ -867,7 +895,8 @@ def send_email_with_attachment(to_email, path, content, file_path=None):
 
 if __name__ == '__main__':
     # socketio.run(app, debug=True, port=5001, use_reloader=False, allow_unsafe_werkzeug=True)
-    pass
+    socketio.run(app, debug=True)
+    # pass
 #finished :)
 
 

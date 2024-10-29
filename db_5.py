@@ -272,7 +272,25 @@ def show_db():
 
     for user in users:
         print(user)
+def drop_users_table():
+    conn = db_connection()
+    if conn is not None:
+        try:
+            with conn.cursor() as cur:
+                cur.execute("DROP TABLE IF EXISTS users;")
+                conn.commit()
+                print("Table 'users' dropped successfully.")
+        except Exception as e:
+            print("An error occurred:", e)
+            conn.rollback()
+        finally:
+            conn.close()
+    else:
+        print("Connection to the database could not be established.")
 
+
+# drop_users_table()
+# show_db()
 
 
 if __name__ == '__main__':
