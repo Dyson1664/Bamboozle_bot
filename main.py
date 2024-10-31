@@ -35,7 +35,6 @@ E_PASS = os.getenv('E_PASS')
 E_NAME = os.getenv('E_NAME')
 
 app = Flask(__name__)
-app.secret_key = 'your_secret_key'
 
 # import openai
 # openai.api_key = API_KEY
@@ -47,7 +46,7 @@ login_manager.login_view = 'login'
 
 
 DATABASE_URL = os.getenv('DATABASE_URL')
-
+SECRET_KEY = os.getenv('SECRET_KEY')
 def get_db_connection():
     try:
         conn = psycopg2.connect(DATABASE_URL, sslmode='require')
