@@ -212,9 +212,9 @@ class Driver:
 
         options = Options()
         # Set the binary location to the one provided by the buildpack
-        options.binary_location = os.environ.get('GOOGLE_CHROME_SHIM', None)
+        options.binary_location = os.environ.get('GOOGLE_CHROME_BIN')
         if not options.binary_location:
-            raise Exception('GOOGLE_CHROME_SHIM not found in environment variables.')
+            raise Exception('GOOGLE_CHROME_BIN not found in environment variables.')
 
         # Add your desired options
         options.add_argument('--headless')  # Use 'new' headless mode for Chrome >= 109
@@ -233,9 +233,6 @@ class Driver:
             raise Exception('CHROMEDRIVER_PATH not found in environment variables.')
 
         chrome_service = Service(executable_path=chromedriver_path)
-
-        print('GOOGLE_CHROME_SHIM:', os.environ.get('GOOGLE_CHROME_SHIM'))
-        print('CHROMEDRIVER_PATH:', os.environ.get('CHROMEDRIVER_PATH'))
 
         self.driver = webdriver.Chrome(service=chrome_service, options=options)
 
