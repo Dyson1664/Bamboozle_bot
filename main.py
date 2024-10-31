@@ -7,9 +7,11 @@ from selenium.common.exceptions import WebDriverException
 from selenium.webdriver.chrome.service import Service as ChromeService
 from webdriver_manager.chrome import ChromeDriverManager
 from time import sleep
-from sqlite3 import DatabaseError
+import psycopg2
+from psycopg2 import sql
 
-import db_5
+# import db_5
+import postgres_db
 
 from docx import Document
 from word_search_generator import WordSearch
@@ -22,6 +24,8 @@ from werkzeug.security import generate_password_hash, check_password_hash
 
 import os
 from dotenv import load_dotenv
+
+ # = db_5
 load_dotenv()
 
 PASSWORD = os.getenv('PASSWORD')
@@ -42,9 +46,15 @@ login_manager.init_app(app)
 login_manager.login_view = 'login'
 
 
-import psycopg2
+DATABASE_URL = os.getenv('DATABASE_URL')
 
-db_5.create_login_db()
+def get_db_connection():
+    try:
+        conn = psycopg2.connect(DATABASE_URL, sslmode='require')
+        return conn
+    except psycopg2.Error as e:
+        print(f"Error connecting to the database: {e}")
+        return None
 
 
 # os.environ["GOOGLE_CHROME_BIN"] = r"C:\Users\PC\Downloads\chrome-win64 (3)\chrome-win64\chrome.exe"
@@ -52,27 +62,19 @@ db_5.create_login_db()
 # os.environ["CHROMEDRIVER_PATH"] = r"C:\Users\PC\Downloads\chromedriver-win64 (3)\chromedriver-win64\chromedriver.exe"
 from flask_login import UserMixin
 from werkzeug.security import check_password_hash
-import sqlite3
-
+from psycopg2 import DatabaseError
 
 
 from cryptography.fernet import Fernet
-#run once and made only one time
-def generate_key():
-    # Generate a key for encryption
-    key = Fernet.generate_key()
-    # Write the key to a file
-    with open('secret.key', 'wb') as key_file:
-        key_file.write(key)
 
 
 def load_key():
-    # Load the previously generated key
-    return open('secret.key', 'rb').read()
+    key = os.getenv('FERNET_KEY')
+    if key is None:
+        raise ValueError("No FERNET_KEY found in environment variables")
+    return key.encode()
 
-# Load the key
 key = load_key()
-# Create a Fernet cipher object
 cipher_suite = Fernet(key)
 
 
@@ -94,10 +96,12 @@ class User(UserMixin):
     def add_user(username, password, personal_email, bamboozle_email, bamboozle_password):
         # Check if email already exists
         try:
-            with sqlite3.connect('vocabulary.db2') as conn:
-                cur = conn.cursor()
-                cur.execute('SELECT * FROM users WHERE personal_email = ?', (personal_email,))
-                existing_user = cur.fetchone()
+            conn = get_db_connection()
+            if conn is None:
+                return None
+            cur = conn.cursor()
+            cur.execute('SELECT * FROM users WHERE personal_email = %s', (personal_email,))
+            existing_user = cur.fetchone()
 
             if existing_user:
                 print("User with this email already exists.")
@@ -106,71 +110,94 @@ class User(UserMixin):
             hashed_password = generate_password_hash(password)
 
             if bamboozle_password:
-                encrypted_baamboozle_password = cipher_suite.encrypt(bamboozle_password.encode()).decode()
+                encrypted_bamboozle_password = cipher_suite.encrypt(bamboozle_password.encode()).decode()
             else:
-                encrypted_baamboozle_password = None
+                encrypted_bamboozle_password = None
 
+            insert_query = '''
+                        INSERT INTO users (username, password, personal_email, bamboozle_email, bamboozle_password)
+                        VALUES (%s, %s, %s, %s, %s)
+                        '''
+            cur.execute(insert_query,
+                        (username, hashed_password, personal_email, bamboozle_email, encrypted_bamboozle_password))
+            conn.commit()
+            print('User added successfully.')
+            return True
 
-            with sqlite3.connect('vocabulary.db2') as conn:
-                cur = conn.cursor()
-                insert = '''
-                INSERT INTO users (username, password, personal_email, bamboozle_email, bamboozle_password)
-                VALUES (?, ?, ?, ?, ?)
-                '''
-                cur.execute(insert, (username, hashed_password, personal_email, bamboozle_email, encrypted_baamboozle_password))
-                conn.commit()
-                print('User added successfully.')
-                return True
-
-        except sqlite3.Error as e:
+        except psycopg2.Error as e:
             print(f"An error occurred: {e}")
             return None
 
+        finally:
+            if conn:
+                cur.close()
+                conn.close()
+
     @staticmethod
     def check_user(user_id):
-        with sqlite3.connect('vocabulary.db2') as conn:
+        try:
+            conn = get_db_connection()
+            if conn is None:
+                return None
             cur = conn.cursor()
-            cur.execute('SELECT * FROM users WHERE id = ?', (user_id,))
+            cur.execute('SELECT * FROM users WHERE id = %s', (user_id,))
             user = cur.fetchone()
 
-        if user:
-            if user[5]:
-                decrypted_baamboozle_password = cipher_suite.decrypt(user[5].encode()).decode()
-            else:
-                decrypted_baamboozle_password = None
+            if user:
+                decrypted_bamboozle_password = cipher_suite.decrypt(user[5].encode()).decode() if user[5] else None
+                user_object = User(
+                    id=user[0],
+                    username=user[1],
+                    password=user[2],
+                    personal_email=user[3],
+                    bamboozle_email=user[4],
+                    bamboozle_password=decrypted_bamboozle_password
+                )
+                return user_object
+            return None
 
-            user_object = User(
-                id=user[0],
-                username=user[1],
-                password=user[2],
-                personal_email=user[3],
-                bamboozle_email=user[4],
-                bamboozle_password=decrypted_baamboozle_password
-            )
-            return user_object
-        return None
+        except psycopg2.Error as e:
+            print(f"An error occurred: {e}")
+            return None
+
+        finally:
+            if conn:
+                cur.close()
+                conn.close()
+
 
     @staticmethod
     def verify_user(username, password):
-        with sqlite3.connect('vocabulary.db2') as conn:
+        try:
+            conn = get_db_connection()
+            if conn is None:
+                return None
             cur = conn.cursor()
-            cur.execute('SELECT * FROM users WHERE username = ?', (username,))
+            cur.execute('SELECT * FROM users WHERE username = %s', (username,))
             user = cur.fetchone()
 
-        if user and check_password_hash(user[2], password):
-            if user[5]:
-                decrypted_baamboozle_password = cipher_suite.decrypt(user[5].encode()).decode()
-            else:
-                decrypted_baamboozle_password = None
-            return User(
-                id=user[0],
-                username=user[1],
-                password=user[2],
-                personal_email=user[3],
-                bamboozle_email=user[4],
-                bamboozle_password=decrypted_baamboozle_password
-            )
-        return None
+            if user and check_password_hash(user[2], password):
+                decrypted_bamboozle_password = cipher_suite.decrypt(user[5].encode()).decode() if user[5] else None
+                return User(
+                    id=user[0],
+                    username=user[1],
+                    password=user[2],
+                    personal_email=user[3],
+                    bamboozle_email=user[4],
+                    bamboozle_password=decrypted_bamboozle_password
+                )
+            return None
+
+        except psycopg2.Error as e:
+            print(f"An error occurred: {e}")
+            return None
+
+        finally:
+            if conn:
+                cur.close()
+                conn.close()
+
+
 
 
 from selenium import webdriver
@@ -191,15 +218,16 @@ class Driver:
             raise Exception('GOOGLE_CHROME_SHIM not found in environment variables.')
 
         # Add your desired options
-        options.add_argument('--headless=old')  # Use 'new' headless mode for Chrome >= 109
+        options.add_argument('--headless')  # Use 'new' headless mode for Chrome >= 109
         options.add_argument('--disable-gpu')
         options.add_argument('--no-sandbox')
         options.add_argument('--disable-dev-shm-usage')
-        options.add_argument('--window-size=1920,1080')
+        # options.add_argument('--window-size=1920,1080')
         options.add_argument('--disable-extensions')
         options.add_argument('--allow-running-insecure-content')
         options.add_argument('--ignore-certificate-errors')
         options.add_argument('--disable-blink-features=AutomationControlled')
+        options.add_argument('--user-agent=Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.77 Safari/537.36')
 
         chromedriver_path = os.environ.get('CHROMEDRIVER_PATH', None)
         if not chromedriver_path:
@@ -563,7 +591,7 @@ def book_unit():
 
             # Fetch vocab for selected book and unit
             if book != 'None':
-                new_vocab = db_5.get_vocab(book, unit)
+                new_vocab = postgres_db.get_vocab(book, unit)
 
                 new_combined_vocab.extend(new_vocab)
 
@@ -605,9 +633,9 @@ def book_unit():
 
 #query database for book and coresponding unit vocab
 def setup_function():
-    book_to_units = db_5.some_function()
-    books = db_5.get_all_books()
-    kg_vocab = db_5.make_kg_dict()
+    book_to_units = postgres_db.some_function()
+    books = postgres_db.get_all_books()
+    kg_vocab = postgres_db.make_kg_dict()
     return book_to_units, books, kg_vocab
 
 
@@ -895,7 +923,7 @@ def send_email_with_attachment(to_email, path, content, file_path=None):
 
 if __name__ == '__main__':
     # socketio.run(app, debug=True, port=5001, use_reloader=False, allow_unsafe_werkzeug=True)
-    # socketio.run(app, debug=True)
+    socketio.run(app, debug=False)
     pass
 #finished :)
 

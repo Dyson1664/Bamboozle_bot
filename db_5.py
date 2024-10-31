@@ -68,6 +68,7 @@ def query_kindergarten_db(level, title):
         results = cursor.fetchall()
 
 
+
         conn.commit()
         return results
 
