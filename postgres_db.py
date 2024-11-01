@@ -97,6 +97,10 @@ def some_function():
             else:
                 books_units[book].append(unit)
 
+        for book in books_units:
+            books_units[book].sort()
+
+        print(books_units)
         return books_units
 
     except psycopg2.Error as e:
@@ -129,6 +133,7 @@ def make_kg_dict():
             else:
                 kg_dict[title].append(vocab)
 
+        kg_dict = dict(sorted(kg_dict.items()))
         return kg_dict
 
     except psycopg2.Error as e:
@@ -336,4 +341,5 @@ if __name__ == '__main__':
     # Example: Create tables if they don't exist
     # create_login_db()
     # You can call other functions here for testing
+    make_kg_dict()
     pass

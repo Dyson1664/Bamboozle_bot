@@ -7,6 +7,8 @@ from selenium.common.exceptions import WebDriverException
 from selenium.webdriver.chrome.service import Service as ChromeService
 from webdriver_manager.chrome import ChromeDriverManager
 from time import sleep
+import datetime
+
 import psycopg2
 from psycopg2 import sql
 
@@ -294,11 +296,35 @@ class Driver:
                 EC.presence_of_element_located((By.ID, 'two')))
             description_box.send_keys(title)
 
+            self.accept_cookies()
+
             make_game_button = WebDriverWait(self.driver, 10).until(
                 EC.presence_of_element_located((By.ID, 'five')))
             make_game_button.click()
 
-            self.close_pop_up()
+            sleep(2)
+
+            image_library_button_xpath = "//div[@id='question-form']//button[@type='button']"
+            WebDriverWait(self.driver, 20).until(
+                EC.element_to_be_clickable((By.XPATH, image_library_button_xpath))
+            ).click()
+            sleep(1)
+
+
+            set_to_image_button = WebDriverWait(self.driver, 10).until(
+                EC.element_to_be_clickable((By.ID, "web-lib"))
+            )
+            set_to_image_button.click()
+            sleep(1)
+
+            close_button = WebDriverWait(self.driver, 10).until(
+                EC.element_to_be_clickable((By.CSS_SELECTOR, "button.close.close-gif"))
+            )
+            close_button.click()
+            sleep(2)
+
+
+
 
         except WebDriverException as e:
             print("Exception occurred while interacting with the element: ", e)
@@ -306,22 +332,22 @@ class Driver:
     #loop though adding vocab and clicking pictures
     def create_game_part_two(self, vocabs, email):
         try:
-            image_library_button_xpath = "//div[@id='question-form']//button[@type='button']"
-            image_library_button = WebDriverWait(self.driver, 20).until(
-                EC.element_to_be_clickable((By.XPATH, image_library_button_xpath))
-            )
-            image_library_button.click()
-
-            image_button = WebDriverWait(self.driver, 20).until(
-                EC.element_to_be_clickable((By.ID, "web-lib"))
-            )
-            image_button.click()
-            sleep(6)
-
-            close_button = WebDriverWait(self.driver, 10).until(
-                EC.element_to_be_clickable((By.CLASS_NAME, 'close-gif'))
-            )
-            close_button.click()
+            # image_library_button_xpath = "//div[@id='question-form']//button[@type='button']"
+            # image_library_button = WebDriverWait(self.driver, 20).until(
+            #     EC.element_to_be_clickable((By.XPATH, image_library_button_xpath))
+            # )
+            # image_library_button.click()
+            #
+            # image_button = WebDriverWait(self.driver, 20).until(
+            #     EC.element_to_be_clickable((By.ID, "web-lib"))
+            # )
+            # image_button.click()
+            # sleep(6)
+            #
+            # close_button = WebDriverWait(self.driver, 10).until(
+            #     EC.element_to_be_clickable((By.CLASS_NAME, 'close-gif'))
+            # )
+            # close_button.click()
             self.accept_cookies()
 
             for vocab in vocabs:
@@ -359,12 +385,14 @@ class Driver:
         vocab_box.click()
         vocab_box.clear()
         vocab_box.send_keys(vocabs)
+        sleep(1)
 
 
         image_library_button_xpath = "//div[@id='question-form']//button[@type='button']"
         WebDriverWait(self.driver, 20).until(
             EC.element_to_be_clickable((By.XPATH, image_library_button_xpath))
         ).click()
+        sleep(1)
 
         try:
             first_image = WebDriverWait(self.driver, 15).until(
@@ -383,10 +411,16 @@ class Driver:
 
             except Exception as e:
                 print('close/re-open')
+                sleep(1)
                 self.close_reopen()
                 print('Couldn\'t click first pic. Had to close and reopen', e)
+                sleep(2)
+
+
 
             print('Could not click first image')
+
+
 
         save_button = WebDriverWait(self.driver, 10).until(
             EC.element_to_be_clickable((By.ID, "tally"))
