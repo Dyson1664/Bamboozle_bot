@@ -704,9 +704,8 @@ def handle_bamboozle(vocab_words, bamboozle_title, books, book_to_units, kg_voca
 
     if vocabs:
         driver = Driver()
-        thread = threading.Thread(target=run_bamboozle,
-                                  args=(driver, url, bamboozle_email, bamboozle_password, bamboozle_title, vocabs))
-        thread.start()
+        socketio.start_background_task(run_bamboozle, driver, url, bamboozle_email, bamboozle_password, bamboozle_title, vocabs)
+        # thread.start()
 
     # Return the template with the updated vocabulary
     return render_template('book_unit.html',  vocab=vocab_words, books=books, book_to_units=book_to_units, kg_vocab=kg_vocab, selected_book=selected_book, selected_unit=selected_unit)
@@ -727,8 +726,8 @@ def handle_review_quiz(vocabs, books, kg_vocab, book_to_units, selected_book, se
 
     if vocabs:
         driver = Driver()
-        quiz_thread = threading.Thread(target=create_review_quiz, args=(driver, vocabs, email))
-        quiz_thread.start()
+        socketio.start_background_task(create_review_quiz, driver, vocabs, email)
+        # quiz_thread.start()
 
 
     return render_template('book_unit.html', vocab=vocabs, books=books, book_to_units=book_to_units, kg_vocab=kg_vocab,
@@ -754,8 +753,8 @@ def handle_wordsearch(vocabs, normal_vocabs, books, kg_vocab, book_to_units, sel
 
     if vocabs:
         driver = Driver()
-        word_search_thread = threading.Thread(target=run_word_search, args=(driver, vocabs, email))
-        word_search_thread.start()
+        socketio.start_background_task(run_word_search, driver, vocabs, email)
+        # word_search_thread.start()
 
 
     return render_template('book_unit.html', vocab=normal_vocabs, books=books, kg_vocab=kg_vocab, book_to_units=book_to_units,
