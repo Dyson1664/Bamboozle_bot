@@ -20,7 +20,7 @@ from word_search_generator import WordSearch
 import threading
 
 
-
+from flask import request
 from flask_login import UserMixin, login_user, LoginManager, login_required, logout_user, current_user
 from werkzeug.security import generate_password_hash, check_password_hash
 
@@ -36,8 +36,24 @@ API_KEY = os.getenv('API_KEY')
 E_PASS = os.getenv('E_PASS')
 E_NAME = os.getenv('E_NAME')
 
+
+from flask import Flask, request
+from flask_login import current_user
+from flask_socketio import SocketIO
 app = Flask(__name__)
 app.secret_key = os.getenv('SECRET_KEY')
+
+ENVIRONMENT = os.getenv('ENVIRONMENT', 'development')
+
+if ENVIRONMENT == 'production':
+    # Production settings
+    async_mode = 'gevent'
+else:
+    # Development settings
+    async_mode = 'threading'
+
+socketio = SocketIO(app, async_mode=async_mode, cors_allowed_origins='*')
+
 
 # import openai
 # openai.api_key = API_KEY
@@ -77,6 +93,9 @@ def load_key():
 
 key = load_key()
 cipher_suite = Fernet(key)
+
+
+
 
 
 @login_manager.user_loader
@@ -691,74 +710,100 @@ def handle_bamboozle(vocab_words, bamboozle_title, books, book_to_units, kg_voca
     vocabs = vocab_words.split(', ')
     print('split:', vocabs)
 
-    def run_bamboozle(driver, url, bamboozle_email, bamboozle_password, bamboozle_title, vocabs):
+    def run_bamboozle(driver, url, bamboozle_email, bamboozle_password, bamboozle_title, vocabs, user_id):
         try:
             if bamboozle_email and bamboozle_password:
-                driver.create_bamboozle(url, bamboozle_email, bamboozle_password, bamboozle_title, vocabs)
+                driver.create_bamboozle(url, bamboozle_email, bamboozle_password, bamboozle_title, vocabs, user_id)
+                sid = user_sid_map.get(str(user_id))
+                if sid:
+                    socketio.emit('email_sent', {'message': f'Bamboozle game created successfully!'}, room=sid)
+                else:
+                    print(f'No sid found for user {user_id}')
             else:
                 flash('Baamboozle credentials are missing. Please update your profile.', 'danger')
         except Exception as e:
             print(e)
+            sid = user_sid_map.get(str(user_id))
+            if sid:
+                socketio.emit('email_error', {'message': f'Failed to create Bamboozle game. Error: {str(e)}'}, room=sid)
+            else:
+                print(f'No sid found for user {user_id}')
         finally:
             driver.close()
 
     if vocabs:
         driver = Driver()
-        socketio.start_background_task(run_bamboozle, driver, url, bamboozle_email, bamboozle_password, bamboozle_title, vocabs)
-        # thread.start()
+        user_id = current_user.get_id()
+        socketio.start_background_task(run_bamboozle, driver, url, bamboozle_email, bamboozle_password, bamboozle_title, vocabs, user_id)
 
     # Return the template with the updated vocabulary
-    return render_template('book_unit.html',  vocab=vocab_words, books=books, book_to_units=book_to_units, kg_vocab=kg_vocab, selected_book=selected_book, selected_unit=selected_unit)
+    return render_template('book_unit.html', vocab=vocab_words, books=books, book_to_units=book_to_units, kg_vocab=kg_vocab, selected_book=selected_book, selected_unit=selected_unit)
 
 def handle_review_quiz(vocabs, books, kg_vocab, book_to_units, selected_book, selected_unit, email):
     if not vocabs:
         return render_template('book_unit.html', error="Vocabulary is required.", books=books, kg_vocab=kg_vocab,
                                book_to_units=book_to_units, selected_book=selected_book, selected_unit=selected_unit)
 
-    def create_review_quiz(driver, vocabs, email):
+    def create_review_quiz(driver, vocabs, email, user_id):
         print(f'Vocabs**********: {vocabs}, email: {email}')
         try:
-            driver.create_quiz(vocabs, email)
+            driver.create_quiz(vocabs, email, user_id)
+            sid = user_sid_map.get(str(user_id))
+            if sid:
+                socketio.emit('email_sent', {'message': f'Review Quiz sent successfully to {email}'}, room=sid)
+            else:
+                print(f'No sid found for user {user_id}')
         except Exception as e:
             print(e)
+            sid = user_sid_map.get(str(user_id))
+            if sid:
+                socketio.emit('email_error', {'message': f'Failed to send Review Quiz to {email}. Error: {str(e)}'}, room=sid)
+            else:
+                print(f'No sid found for user {user_id}')
         finally:
             driver.close()
 
     if vocabs:
         driver = Driver()
-        socketio.start_background_task(create_review_quiz, driver, vocabs, email)
-        # quiz_thread.start()
-
+        user_id = current_user.get_id()
+        socketio.start_background_task(create_review_quiz, driver, vocabs, email, user_id)
 
     return render_template('book_unit.html', vocab=vocabs, books=books, book_to_units=book_to_units, kg_vocab=kg_vocab,
                            selected_book=selected_book, selected_unit=selected_unit)
-
-
 def handle_wordsearch(vocabs, normal_vocabs, books, kg_vocab, book_to_units, selected_book, selected_unit, email):
     if not vocabs:
         return render_template('book_unit.html', error="Vocabulary is required.", books=books, kg_vocab=kg_vocab,
                                book_to_units=book_to_units,
                                selected_book=selected_book, selected_unit=selected_unit)
 
-    def run_word_search(driver, vocabs, email):
+    def run_word_search(driver, vocabs, email, user_id):
         print(f'Vocabs*******: {vocabs}')
         try:
-            driver.create_word_search(vocabs, email)
+            driver.create_word_search(vocabs, email, user_id)
+            # Get the client's sid
+            sid = user_sid_map.get(str(user_id))
+            if sid:
+                socketio.emit('email_sent', {'message': f'Wordsearch sent successfully to {email}'}, room=sid)
+            else:
+                print(f'No sid found for user {user_id}')
         except Exception as e:
             print(e)
-
+            sid = user_sid_map.get(str(user_id))
+            if sid:
+                socketio.emit('email_error', {'message': f'Failed to send wordsearch to {email}. Error: {str(e)}'}, room=sid)
+            else:
+                print(f'No sid found for user {user_id}')
         finally:
             driver.close()
 
-
     if vocabs:
         driver = Driver()
-        socketio.start_background_task(run_word_search, driver, vocabs, email)
-        # word_search_thread.start()
-
+        user_id = current_user.get_id()
+        socketio.start_background_task(run_word_search, driver, vocabs, email, user_id)
 
     return render_template('book_unit.html', vocab=normal_vocabs, books=books, kg_vocab=kg_vocab, book_to_units=book_to_units,
                            selected_book=selected_book, selected_unit=selected_unit)
+
 
 
 
@@ -837,18 +882,35 @@ def create_a_word_document(text):
     path = os.path.abspath(filename)
     return path
 
-from flask_socketio import SocketIO
 
-ENVIRONMENT = os.getenv('ENVIRONMENT', 'development')
 
-if ENVIRONMENT == 'production':
-    # Production settings
-    async_mode = 'gevent'
-else:
-    # Development settings
-    async_mode = 'threading'
+user_sid_map = {}
 
-socketio = SocketIO(app, async_mode=async_mode)
+@socketio.on('register')
+def handle_register(data):
+    user_id = data.get('user_id')
+    sid = request.sid
+    if user_id:
+        user_sid_map[user_id] = sid
+        print(f'User {user_id} registered with sid {sid}')
+
+
+@socketio.on('disconnect')
+def handle_disconnect():
+    sid = request.sid
+    # Remove the sid from the user_sid_map
+    user_id = None
+    for uid, user_sid in user_sid_map.items():
+        if user_sid == sid:
+            user_id = uid
+            break
+    if user_id:
+        user_sid_map.pop(user_id, None)
+        print(f'User {user_id} disconnected')
+
+
+
+
 
 @socketio.on('connect')
 def handle_connection():
@@ -867,7 +929,7 @@ import mimetypes
 import shutil
 
 
-def send_email_with_attachment(to_email, path, content, file_path=None):
+def send_email_with_attachment(to_email, path, content, user_id, file_path=None):
 
     # Your Gmail account credentials from environment variables
     from_email = os.getenv('E_NAME')  # Your Gmail email (from .env)
@@ -927,12 +989,21 @@ def send_email_with_attachment(to_email, path, content, file_path=None):
         server.sendmail(from_email, to_email, msg.as_string())
 
         # If email sent successfully, emit a WebSocket event
-        socketio.emit('email_sent', {'message': f'{content} sent successfully to {to_email}'})
+        sid = user_sid_map.get(str(user_id))
+        if sid:
+            socketio.emit('email_sent', {'message': f'{content} sent successfully to {to_email}'}, room=sid)
+        else:
+            print(f'No sid found for user {user_id}')
         print(f'Email sent successfully to {to_email}')
 
     except Exception as e:
         # Emit a WebSocket event in case of failure
-        socketio.emit('email_error', {'message': f'Failed to send email to {to_email}. Error: {str(e)}'})
+        sid = user_sid_map.get(str(user_id))
+        if sid:
+            socketio.emit('email_error', {'message': f'Failed to send {content} to {to_email}. Error: {str(e)}'},
+                          room=sid)
+        else:
+            print(f'No sid found for user {user_id}')
         print(f'Failed to send email: {e}')
 
     finally:

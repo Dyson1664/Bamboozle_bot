@@ -11,7 +11,16 @@
     <script src="https://cdn.socket.io/4.4.1/socket.io.min.js"></script>
 
 <script>
-    var socket = io.connect('http://' + document.domain + ':' + location.port);
+    // Initialize the Socket.IO client
+    var socket = io();
+
+    // Function to handle registration after connecting
+    socket.on('connect', function() {
+        console.log('Connected to Socket.IO server');
+
+        // Send the user ID to the server to register the SID
+        socket.emit('register', {'user_id': '{{ current_user.get_id() }}'});
+    });
 
     // Queue to handle multiple email-sent messages
     var messageQueue = [];
@@ -49,6 +58,16 @@
         displayMessage();
     });
 
+    // Listen for the 'email_error' event from the server
+    socket.on('email_error', function(data) {
+        console.log('Received error:', data.message);  // Log the error message to the console
+
+        // Add the error message to the queue
+        messageQueue.push(data.message);
+
+        // Try to display the message
+        displayMessage();
+    });
 </script>
 
 
