@@ -259,14 +259,6 @@
             }, 5000); // Time in milliseconds (5000ms = 5 seconds)
         });
     </script>
-<script>
-    var socket = io.connect('http://' + document.domain + ':' + location.port);
-    socket.on('email_sent', function(data) {
-        console.log('Received message:', data.message);  // Log the message to the console
-
-        document.getElementById('email-status').innerText = data.message;
-    });
-</script>
 
 
 

@@ -515,18 +515,18 @@ class Driver:
         self.create_game(title)
         self.create_game_part_two(vocabs, email)
 
-    def create_quiz(self, vocab_words, email):
+    def create_quiz(self, vocab_words, email, user_id):
         quiz_variable = 'Review Quiz'
         prompt = create_prompt(vocab_words)
         response = generate_esl_quiz(prompt, max_tokens=550)
         word_s = create_a_word_document(response)
-        send_email_with_attachment(email, word_s, quiz_variable)
+        send_email_with_attachment(email, word_s, quiz_variable, user_id)
 
 
-    def create_word_search(self, vocabs, email):
+    def create_word_search(self, vocabs, email, user_id):
         wordsearch_variable = 'Wordsearch'
         wordsearch_path = make_word_search(vocabs)
-        send_email_with_attachment(email, wordsearch_path, wordsearch_variable)
+        send_email_with_attachment(email, wordsearch_path, wordsearch_variable, user_id)
 
     def close(self):
         self.driver.quit()
@@ -713,7 +713,7 @@ def handle_bamboozle(vocab_words, bamboozle_title, books, book_to_units, kg_voca
     def run_bamboozle(driver, url, bamboozle_email, bamboozle_password, bamboozle_title, vocabs, user_id):
         try:
             if bamboozle_email and bamboozle_password:
-                driver.create_bamboozle(url, bamboozle_email, bamboozle_password, bamboozle_title, vocabs, user_id)
+                driver.create_bamboozle(url, bamboozle_email, bamboozle_password, bamboozle_title, vocabs)
                 sid = user_sid_map.get(str(user_id))
                 if sid:
                     socketio.emit('email_sent', {'message': f'Bamboozle game created successfully!'}, room=sid)
@@ -842,7 +842,6 @@ Please do not include the answers in the quiz. Aim to keep the total length of t
 1. Question about the story.
 2. Another question about the story.
 ... and so on."""
-
 
 
 def generate_esl_quiz(prompt, max_tokens=550):
@@ -1022,8 +1021,8 @@ def send_email_with_attachment(to_email, path, content, user_id, file_path=None)
 
 
 if __name__ == '__main__':
-    # socketio.run(app, debug=True, port=5001, use_reloader=False, allow_unsafe_werkzeug=True)
-    socketio.run(app, debug=False)
+    socketio.run(app, debug=True, port=5001, use_reloader=False, allow_unsafe_werkzeug=True)
+    # socketio.run(app, debug=False)
     pass
 #finished :)
 
