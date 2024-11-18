@@ -245,7 +245,7 @@ class Driver:
             raise Exception('GOOGLE_CHROME_BIN not found in environment variables.')
 
         # Add your desired options
-        options.add_argument('--headless')  # Use 'new' headless mode for Chrome >= 109
+        options.add_argument('--headless=old')  # Use 'new' headless mode for Chrome >= 109
         options.add_argument('--disable-gpu')
         options.add_argument('--no-sandbox')
         options.add_argument('--disable-dev-shm-usage')
