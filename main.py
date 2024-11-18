@@ -1,23 +1,12 @@
 from flask import Flask, render_template, request, session, redirect, url_for, flash, jsonify
-from selenium import webdriver
 from selenium.webdriver.common.by import By
 from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
 from selenium.common.exceptions import WebDriverException
-from selenium.webdriver.chrome.service import Service as ChromeService
-from webdriver_manager.chrome import ChromeDriverManager
 from time import sleep
-import datetime
 import logging
 import sys
-
-logging.basicConfig(stream=sys.stdout, level=logging.DEBUG,
-                    format='%(asctime)s %(levelname)s: %(message)s',
-                    datefmt='%Y-%m-%d %H:%M:%S')
-logger = logging.getLogger(__name__)
-
 import psycopg2
-from psycopg2 import sql
 
 # import db_5
 import postgres_db
@@ -25,12 +14,8 @@ import postgres_db
 from docx import Document
 from word_search_generator import WordSearch
 import threading
-
-
-from flask import request
 from flask_login import UserMixin, login_user, LoginManager, login_required, logout_user, current_user
 from werkzeug.security import generate_password_hash, check_password_hash
-
 import os
 from dotenv import load_dotenv
 
@@ -60,18 +45,17 @@ else:
     async_mode = 'threading'
 
 socketio = SocketIO(app, async_mode=async_mode, cors_allowed_origins='*')
-
-
-# import openai
-# openai.api_key = API_KEY
-
-
 login_manager = LoginManager()
 login_manager.init_app(app)
 login_manager.login_view = 'login'
 
-
 DATABASE_URL = os.getenv('DATABASE_URL')
+
+logging.basicConfig(stream=sys.stdout, level=logging.DEBUG,
+                    format='%(asctime)s %(levelname)s: %(message)s',
+                    datefmt='%Y-%m-%d %H:%M:%S')
+logger = logging.getLogger(__name__)
+
 def get_db_connection():
     try:
         conn = psycopg2.connect(DATABASE_URL, sslmode='require')
@@ -80,15 +64,9 @@ def get_db_connection():
         print(f"Error connecting to the database: {e}")
         return None
 
-
-# os.environ["GOOGLE_CHROME_BIN"] = r"C:\Users\PC\Downloads\chrome-win64 (3)\chrome-win64\chrome.exe"
-
-# os.environ["CHROMEDRIVER_PATH"] = r"C:\Users\PC\Downloads\chromedriver-win64 (3)\chromedriver-win64\chromedriver.exe"
 from flask_login import UserMixin
 from werkzeug.security import check_password_hash
 from psycopg2 import DatabaseError
-
-
 from cryptography.fernet import Fernet
 
 
@@ -101,14 +79,9 @@ def load_key():
 key = load_key()
 cipher_suite = Fernet(key)
 
-
-
-
-
 @login_manager.user_loader
 def load_user(user_id):
     return User.check_user(int(user_id))
-
 
 class User(UserMixin):
     def __init__(self, id, username, password, personal_email, bamboozle_email, bamboozle_password):
@@ -225,8 +198,6 @@ class User(UserMixin):
                 conn.close()
 
 
-
-
 from selenium import webdriver
 from selenium.webdriver.chrome.service import Service
 from selenium.webdriver.chrome.options import Options
@@ -244,12 +215,11 @@ class Driver:
         if not options.binary_location:
             raise Exception('GOOGLE_CHROME_BIN not found in environment variables.')
 
-        # Add your desired options
-        options.add_argument('--headless=old')  # Use 'new' headless mode for Chrome >= 109
+        # Add your desired options. Old needed because latest version has a problem
+        options.add_argument('--headless=old')
         options.add_argument('--disable-gpu')
         options.add_argument('--no-sandbox')
         options.add_argument('--disable-dev-shm-usage')
-        # options.add_argument('--window-size=1920,1080')
         options.add_argument('--disable-extensions')
         options.add_argument('--allow-running-insecure-content')
         options.add_argument('--ignore-certificate-errors')
@@ -264,55 +234,20 @@ class Driver:
 
         self.driver = webdriver.Chrome(service=chrome_service, options=options)
 
-#working
-# class Driver:
-#     def __init__(self):
-#         # chrome_options = webdriver.ChromeOptions()
-#         # chrome_options.binary_location = os.environ.get("GOOGLE_CHROME_BIN")
-#         # chrome_options.add_argument("--headless")
-#         # chrome_options.add_argument('--start-maximized')
-#         # chrome_options.add_argument("--disable-dev-shm-usage")
-#         # chrome_options.add_argument("--no-sandbox")
-#         # self. driver = webdriver.Chrome(options=chrome_options)
-
-#         options = webdriver.ChromeOptions()
-#         # https://stackoverflow.com/questions/78996364/chrome-129-headless-shows-blank-window
-#         # use old for now because new update has a bug
-#         options.add_argument('--headless=old')
-#         options.add_argument('--disable-gpu')
-#         options.add_argument('--no-sandbox')
-#         options.add_argument('--disable-dev-shm-usage')
-#         options.add_argument('--window-size=1920,1080')
-#         options.add_argument('--user-agent=Mozilla/5.0 (Windows NT 10.0; Win64; x64) '
-#                              'AppleWebKit/537.36 (KHTML, like Gecko) '
-#                              'Chrome/94.0.4606.81 Safari/537.36')
-#         options.add_argument('--disable-extensions')
-#         options.add_argument('--allow-running-insecure-content')
-#         options.add_argument('--ignore-certificate-errors')
-#         options.add_argument('--disable-blink-features=AutomationControlled')
-
-#         # self.driver = webdriver.Chrome(service=ChromeService(ChromeDriverManager().install()), options=options)
-#         self.driver = webdriver.Chrome(options=options)
-
     def sign_in(self, url, email, password):
         print('1')
         self.driver.get(url)
         try:
-            print('1')
-
             email_input = WebDriverWait(self.driver, 15).until(
                 EC.presence_of_element_located((By.ID, "email"))
             )
             email_input.send_keys(email)
-            print('2')
-
             password_input = WebDriverWait(self.driver, 10).until(
                 EC.presence_of_element_located((By.ID, "password")))
             password_input.send_keys(password)
             sign_in_button = WebDriverWait(self.driver, 10).until(
                 EC.presence_of_element_located((By.CSS_SELECTOR, "button[type='submit']")))
             sign_in_button.click()
-            print('3')
 
         except WebDriverException as e:
             print("Exception occurred while interacting with the element: ", e)
@@ -621,17 +556,12 @@ def book_unit():
         session['selected_unit'] = selected_unit
 
         if request.form['action'] == 'bamboozle':
-            print('1')
             vocab_words = request.form.get('vocab', '')
             if vocab_words:
-                print('2')
-                print(vocab_words)
-                print(type(vocab_words))
                 flash('Creating Bamboozle', 'info')
                 # vocabs = vocab_words.split(', ') if vocab_words else []
 
             title = request.form.get('bamboozleTitle', '')
-            print('3')
             return handle_bamboozle(vocab_words, title, books, book_to_units, kg_vocab, selected_book, selected_unit, bamboozle_email, bamboozle_password)
 
         elif request.form['action'] == 'reviewQuiz':
@@ -676,9 +606,7 @@ def book_unit():
                 # combined_vocab = ', '.join(new_combined_vocab)
                 combined_vocab = ', '.join(str(item) for item in new_combined_vocab)
 
-
             return render_template('book_unit.html', vocab=combined_vocab, books=books, book_to_units=book_to_units, kg_vocab=kg_vocab, selected_book=selected_book, selected_unit=selected_unit)
-
 
         elif request.form['action'] == "wordSearch":
             print(f"Flash messages: {session.get('_flashes', [])}")
@@ -722,8 +650,6 @@ def handle_bamboozle(vocab_words, bamboozle_title, books, book_to_units, kg_voca
         return render_template('book_unit.html', error="Vocabulary is required.", books=books, book_to_units=book_to_units, kg_vocab=kg_vocab, selected_book=selected_book, selected_unit=selected_unit)
     # Split vocab words into a list
     vocabs = vocab_words.split(', ')
-    print('split:', vocabs)
-
     def run_bamboozle(driver, url, bamboozle_email, bamboozle_password, bamboozle_title, vocabs, user_id):
         try:
             if bamboozle_email and bamboozle_password:
@@ -759,7 +685,6 @@ def handle_review_quiz(vocabs, books, kg_vocab, book_to_units, selected_book, se
                                book_to_units=book_to_units, selected_book=selected_book, selected_unit=selected_unit)
 
     def create_review_quiz(driver, vocabs, email, user_id):
-        print(f'Vocabs**********: {vocabs}, email: {email}')
         try:
             driver.create_quiz(vocabs, email, user_id)
             sid = user_sid_map.get(str(user_id))
@@ -791,7 +716,6 @@ def handle_wordsearch(vocabs, normal_vocabs, books, kg_vocab, book_to_units, sel
                                selected_book=selected_book, selected_unit=selected_unit)
 
     def run_word_search(driver, vocabs, email, user_id):
-        print(f'Vocabs*******: {vocabs}')
         try:
             driver.create_word_search(vocabs, email, user_id)
             # Get the client's sid
@@ -817,9 +741,6 @@ def handle_wordsearch(vocabs, normal_vocabs, books, kg_vocab, book_to_units, sel
 
     return render_template('book_unit.html', vocab=normal_vocabs, books=books, kg_vocab=kg_vocab, book_to_units=book_to_units,
                            selected_book=selected_book, selected_unit=selected_unit)
-
-
-
 
 
 url = 'https://www.baamboozle.com/games/create'
@@ -876,7 +797,6 @@ def generate_esl_quiz(prompt, max_tokens=550):
         return f"An error occurred: {e}"
 
 def make_word_search(vocab):
-    print(vocab)
     puzzle = WordSearch(vocab)
     puzzle.show()
     filename = 'word_search.pdf'
@@ -894,8 +814,6 @@ def create_a_word_document(text):
     doc.save(filename)
     path = os.path.abspath(filename)
     return path
-
-
 
 user_sid_map = {}
 
@@ -922,14 +840,9 @@ def handle_disconnect():
         print(f'User {user_id} disconnected')
 
 
-
-
-
 @socketio.on('connect')
 def handle_connection():
     print('Client connected')
-
-
 
 import smtplib
 from email.mime.multipart import MIMEMultipart
@@ -937,13 +850,10 @@ from email.mime.base import MIMEBase
 from email.mime.text import MIMEText
 from email import encoders
 import os
-from flask_socketio import SocketIO, emit
 import mimetypes
-import shutil
 
 
 def send_email_with_attachment(to_email, path, content, user_id, file_path=None):
-
     # Your Gmail account credentials from environment variables
     from_email = os.getenv('E_NAME')  # Your Gmail email (from .env)
     password = os.getenv('E_PASS')  # Your Gmail App Password (from .env)
@@ -1032,13 +942,10 @@ def send_email_with_attachment(to_email, path, content, user_id, file_path=None)
                 print(f'Error deleting file: {e}')
 
 
-
-
 if __name__ == '__main__':
-    socketio.run(app, debug=True, port=5001, use_reloader=False, allow_unsafe_werkzeug=True)
-    # socketio.run(app, debug=False)
+    # socketio.run(app, debug=True, port=5001, use_reloader=False, allow_unsafe_werkzeug=True)
+    socketio.run(app, debug=False)
     pass
-#finished :)
 
 
 
