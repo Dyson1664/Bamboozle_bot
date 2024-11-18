@@ -8,6 +8,13 @@ from selenium.webdriver.chrome.service import Service as ChromeService
 from webdriver_manager.chrome import ChromeDriverManager
 from time import sleep
 import datetime
+import logging
+import sys
+
+logging.basicConfig(stream=sys.stdout, level=logging.DEBUG,
+                    format='%(asctime)s %(levelname)s: %(message)s',
+                    datefmt='%Y-%m-%d %H:%M:%S')
+logger = logging.getLogger(__name__)
 
 import psycopg2
 from psycopg2 import sql
