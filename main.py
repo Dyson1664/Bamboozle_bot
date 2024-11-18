@@ -331,8 +331,6 @@ class Driver:
             WebDriverWait(self.driver, 20).until(
                 EC.element_to_be_clickable((By.XPATH, close_game_button))
             ).click()
-            # email = user.email
-            socketio.emit('email_sent', {'message': f'Bamboozle made for account with email: {email}!'})
             print('Bamboozle made')
 
 
