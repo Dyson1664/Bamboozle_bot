@@ -288,18 +288,25 @@ class Driver:
 #         self.driver = webdriver.Chrome(options=options)
 
     def sign_in(self, url, email, password):
+        print('1')
         self.driver.get(url)
         try:
+            print('1')
+
             email_input = WebDriverWait(self.driver, 15).until(
                 EC.presence_of_element_located((By.ID, "email"))
             )
             email_input.send_keys(email)
+            print('2')
+
             password_input = WebDriverWait(self.driver, 10).until(
                 EC.presence_of_element_located((By.ID, "password")))
             password_input.send_keys(password)
             sign_in_button = WebDriverWait(self.driver, 10).until(
                 EC.presence_of_element_located((By.CSS_SELECTOR, "button[type='submit']")))
             sign_in_button.click()
+            print('3')
+
         except WebDriverException as e:
             print("Exception occurred while interacting with the element: ", e)
 
