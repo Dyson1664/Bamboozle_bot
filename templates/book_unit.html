@@ -132,13 +132,13 @@
     </div>
 
     <div class="container">
-        <h2>ESL Game Creation</h2>
+        <h2>ESL Bamboozle Builder</h2>
         {% if error %}
             <div class="error-message">{{ error }}</div>
         {% endif %}
         <form id="bookForm" method="post" onsubmit="return validateForm()">
             <div class="form-group">
-                <label for="bookName">Book Name:</label>
+                <label for="bookName">Book:</label>
                 <select class="form-control" name="bookName" id="bookName" onchange="updateUnits()">
                     <option value="None" {% if not selected_book or selected_book =='None' %} selected {% endif %}>None</option>
                     {% for book in books %}
@@ -147,13 +147,13 @@
                 </select>
             </div>
             <div class="form-group">
-                <label for="unitNumber">Unit Number:</label>
+                <label for="unitNumber">Unit:</label>
                 <select class="form-control" name="unitNumber" id="unitNumber">
                     <!-- Units will be dynamically populated -->
                 </select>
             </div>
             <div class="form-group">
-                <label for="kgTitle">Kindergarten Title:</label>
+                <label for="kgTitle">Kindergarten Topic:</label>
                 <select class="form-control" name="kgTitle" id="kgTitle">
                     <option value="NONE">None</option>
                     {% for title in kg_vocab.keys() %}
@@ -162,7 +162,7 @@
                 </select>
             </div>
             <div class="form-group">
-                <label for="bamboozleTitle">Bamboozle title:</label>
+                <label for="bamboozleTitle">Bamboozle Title:</label>
                 <input type="text" class="form-control" id="bamboozleTitle" name="bamboozleTitle" placeholder="Enter Bamboozle title">
             </div>
             <input type="hidden" name="clickedButton" id="clickedButton" value="" />
@@ -193,8 +193,5 @@
             }, 2000); // Time in milliseconds (5000ms = 5 seconds)
         });
     </script>
-
-
-
     </body>
 </html>
