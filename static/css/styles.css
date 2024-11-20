@@ -1,12 +1,10 @@
-/* styles.css */
-
 /* Reset default margins and paddings */
 html, body {
     margin: 0;
     padding: 0;
     height: 100%;
-    overflow-x: hidden; /* Prevent horizontal scrolling */
-    overflow-y: auto;   /* Allow vertical scrolling when needed */
+    overflow-x: hidden;
+    overflow-y: auto;
 }
 
 /* Container styles */
@@ -22,16 +20,23 @@ html, body {
 h1, h2 {
     text-align: center;
     margin-bottom: 20px;
+    padding-top: 30px;
+    color: #f2f2f2;
+    font-size: 32px;
+    font-weight: 700;
+    font-family: 'Open Sans', sans-serif;
 }
 
 /* Form group spacing */
 .form-group, .mb-3 {
     margin-bottom: 15px;
+    color: #000; /* Ensures text is black */
+    font-weight: bold; /* Makes text bold */
 }
 
 /* Button styling */
 .btn-custom, .btn-primary {
-    background-color: #007bff;
+    background-color: #0099cc;
     color: white;
     width: 100%;
     padding: 10px;
@@ -42,7 +47,8 @@ h1, h2 {
 }
 
 .btn-custom:hover, .btn-primary:hover {
-    background-color: #0056b3;
+    background-color: black;
+    color: white;
 }
 
 /* Error message styling */
@@ -73,29 +79,44 @@ h1, h2 {
 /* Overlay for alerts and status messages */
 .overlay {
     position: fixed;
-    top: 60px;
-    right: 20px; /* Adjusted to match the email status message */
+    top: 0;
+    left: 0;
     z-index: 1050;
-    width: auto;
-    max-width: 300px;
+    width: 100%;
+    pointer-events: none; /* Allows clicks through the overlay */
 }
 
-/* Email status message styling */
-#email-status {
+/* Common Notification Styling */
+.notification {
     position: fixed;
-    top: 60px; /* Adjust if needed */
-    left: 20px; /* Moved to the left */
-    z-index: 1050;
-    background-color: rgba(0, 123, 255, 0.9);
-    color: #fff;
+    top: 60px;
+    z-index: 1051; /* Ensure it appears above the overlay */
+    background-color: #0099cc; /* Set the desired background color */
+    color: #fff; /* Set text color */
     padding: 10px 20px;
     border-radius: 4px;
-    display: none;
-    max-width: 300px;
+    display: none; /* Hidden by default */
+    max-width: 300px; /* Adjust as needed */
+    width: auto;
+    word-wrap: break-word; /* Allow long words to break and wrap */
+    word-break: break-word; /* Ensure words break if necessary */
+    pointer-events: auto; /* Allows interaction with the notification */
+    box-sizing: border-box; /* Include padding in width calculations */
 }
 
-#email-status.show {
-    display: block;
+/* Positioning for Creating Notification (Left) */
+#creating-status {
+    left: 20px;
+}
+
+/* Positioning for Sent/Made Notification (Right) */
+#email-status {
+    right: 20px;
+}
+
+/* Show Class to Display the Notification */
+.notification.show {
+    display: inline-block;
 }
 
 /* Responsive adjustments */
@@ -107,4 +128,12 @@ h1, h2 {
     h1, h2 {
         font-size: 1.3rem;
     }
+}
+
+body {
+    background-image: url('../images/yes.jpg');
+    background-size: cover;            /* Scale the image to cover the entire background */
+    background-position: center center; /* Center the image */
+    background-repeat: no-repeat;       /* Prevent the image from repeating */
+    background-attachment: fixed;       /* Make the background fixed when scrolling */
 }
