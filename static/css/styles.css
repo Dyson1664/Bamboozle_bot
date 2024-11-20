@@ -51,6 +51,22 @@ h1, h2 {
     color: white;
 }
 
+.mt-3 {
+    color: black;
+    font-weight: bold;
+
+}
+
+.mt-3 a {
+    color: white; /* Sets the link color to white */
+    text-decoration: none; /* Optional: Removes the underline from the link */
+}
+
+/* Optional: Add hover effects for better user experience */
+.mt-3 a:hover {
+    color: #f0f0f0; /* Changes color on hover for visual feedback */
+    text-decoration: underline; /* Optional: Adds underline on hover */
+}
 /* Error message styling */
 .error-message {
     color: red;
@@ -132,6 +148,14 @@ h1, h2 {
 
 body {
     background-image: url('../images/yes.jpg');
+    background-size: cover;            /* Scale the image to cover the entire background */
+    background-position: center center; /* Center the image */
+    background-repeat: no-repeat;       /* Prevent the image from repeating */
+    background-attachment: fixed;       /* Make the background fixed when scrolling */
+}
+
+body.register-page {
+    background-image: url('../images/blue.jpg');
     background-size: cover;            /* Scale the image to cover the entire background */
     background-position: center center; /* Center the image */
     background-repeat: no-repeat;       /* Prevent the image from repeating */
