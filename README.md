@@ -25,8 +25,8 @@ A Flask-based web application that automates the creation of interactive ESL gam
 
 ### 1. Clone the Repository:
 
-git clone https://github.com/yourusername/yourrepository.git
-cd yourrepository
+git clone https://github.com/dyson1664/Bamboozle_bot.git
+cd Bamboozle_bot
 
 ### 2. Install Dependencies:
 
@@ -40,16 +40,18 @@ Update the DATABASE_URL in your environment variables.
 ## Configuration
 Create a .env file with the following variables:
 
-* **SECRET_KEY**=your-secret-key
-* **DATABASE_URL**=your-database-url
-* **EMAIL**=your-email@example.com
-* **PASSWORD**=your-email-password
-* **API_KEY**=your-openai-api-key
-* **E_NAME**=your-email@example.com
-* **E_PASS**=your-email-password
-* **FERNET_KEY**=your-fernet-key
-* **CHROMEDRIVER_PATH**=/path/to/chromedriver
-* **GOOGLE_CHROME_BIN**=/path/to/google-chrome
+```ini
+SECRET_KEY=your-secret-key
+DATABASE_URL=your-database-url
+EMAIL=your-email@example.com
+PASSWORD=your-email-password
+API_KEY=your-openai-api-key
+E_NAME=your-email@example.com
+E_PASS=your-email-password
+FERNET_KEY=your-fernet-key
+CHROMEDRIVER_PATH=/path/to/chromedriver
+GOOGLE_CHROME_BIN=/path/to/google-chrome
+```
 
 
 ## Environment Variables:
@@ -62,7 +64,7 @@ Create a .env file with the following variables:
 
 ## Running the Application
 * **Start the Flask application:**
-python main.py
+```python main.py```
 Access the app at http://localhost:5000
 Usage
 
@@ -71,3 +73,4 @@ Usage
 * **Select Vocabulary:** Choose books, units, and topics
 * **Create Games:** Generate Baamboozle games, quizzes, and word searches
 * **Receive Content:** Quizzes and word searches are emailed to you
+
