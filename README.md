@@ -29,10 +29,12 @@ git clone https://github.com/yourusername/yourrepository.git
 cd yourrepository
 
 ### 2. Install Dependencies:
+```bash
 
 pip install -r requirements.txt
 
 ### 3. Set Up Database:
+```bash
 
 Create a PostgreSQL database.
 Update the DATABASE_URL in your environment variables.
