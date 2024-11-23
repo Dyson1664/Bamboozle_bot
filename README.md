@@ -24,17 +24,15 @@ A Flask-based web application that automates the creation of interactive ESL gam
 ## Installation
 
 ### 1. Clone the Repository:
-```bash
+
 git clone https://github.com/yourusername/yourrepository.git
 cd yourrepository
 
 ### 2. Install Dependencies:
-```bash
 
 pip install -r requirements.txt
 
 ### 3. Set Up Database:
-```bash
 
 Create a PostgreSQL database.
 Update the DATABASE_URL in your environment variables.
@@ -42,34 +40,34 @@ Update the DATABASE_URL in your environment variables.
 ## Configuration
 Create a .env file with the following variables:
 
-SECRET_KEY=your-secret-key
-DATABASE_URL=your-database-url
-EMAIL=your-email@example.com
-PASSWORD=your-email-password
-API_KEY=your-openai-api-key
-E_NAME=your-email@example.com
-E_PASS=your-email-password
-FERNET_KEY=your-fernet-key
-CHROMEDRIVER_PATH=/path/to/chromedriver
-GOOGLE_CHROME_BIN=/path/to/google-chrome
+* **SECRET_KEY**=your-secret-key
+* **DATABASE_URL**=your-database-url
+* **EMAIL**=your-email@example.com
+* **PASSWORD**=your-email-password
+* **API_KEY**=your-openai-api-key
+* **E_NAME**=your-email@example.com
+* **E_PASS**=your-email-password
+* **FERNET_KEY**=your-fernet-key
+* **CHROMEDRIVER_PATH**=/path/to/chromedriver
+* **GOOGLE_CHROME_BIN**=/path/to/google-chrome
 
 
 ## Environment Variables:
 
-SECRET_KEY: A secret key for Flask session management
-DATABASE_URL: Connection string for your PostgreSQL database
-EMAIL and PASSWORD: Credentials for the email account used to send emails from the app
-API_KEY: Your OpenAI API key for accessing GPT models
-FERNET_KEY: A key used by the cryptography library to encrypt sensitive data
+* **SECRET_KEY:** A secret key for Flask session management
+* **DATABASE_URL:** Connection string for your PostgreSQL database
+* **EMAIL and PASSWORD:** Credentials for the email account used to send emails from the app
+* **API_KEY:** Your OpenAI API key for accessing GPT models
+* **FERNET_KEY:** A key used by the cryptography library to encrypt sensitive data
 
 ## Running the Application
-Start the Flask application:
-bashCopypython app.py
+* **Start the Flask application:**
+python main.py
 Access the app at http://localhost:5000
 Usage
 
-Register: Sign up with a username, password, and email
-Login: Access your account
-Select Vocabulary: Choose books, units, and topics
-Create Games: Generate Baamboozle games, quizzes, and word searches
-Receive Content: Quizzes and word searches are emailed to you
+* **Register:** Sign up with a username, password, and email
+* **Login:** Access your account
+* **Select Vocabulary:** Choose books, units, and topics
+* **Create Games:** Generate Baamboozle games, quizzes, and word searches
+* **Receive Content:** Quizzes and word searches are emailed to you
