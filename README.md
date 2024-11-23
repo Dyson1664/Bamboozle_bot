@@ -1,60 +1,81 @@
-# Educational Vocabulary App Bot
+ESL Game Creation App
+A Flask-based web application that automates the creation of interactive ESL games and educational content, enhancing language learning experiences for educators and students.
 
-## Overview
-This Flask-based web application enhances educational processes by automating the creation of interactive vocabulary games and content. Leveraging advanced automation technologies such as Selenium and integrating OpenAI's GPT models, this app serves as a dynamic tool for educators.
+Features
+Vocabulary Management: Store and retrieve vocabulary organized by books, units, and kindergarten topics from a PostgreSQL database.
 
-## Features
+Interactive Game Creation: Automate the creation of Baamboozle games using Selenium, pairing vocabulary words with images.
 
-- **Vocabulary Management**: Manages vocabulary storage and retrieval from a PostgreSQL database, organized by book titles and unit numbers.
-- **Interactive Game Creation**: Uses a Selenium-based bot to automate the creation of Bamboozle games, pairing vocabulary words with images to enhance learning engagement.
-- **Content Generation with GPT**: Employs OpenAI's GPT to generate stories and comprehension questions which are then emailed directly to educators.
-- **Word Search Creation**: Automatically generates word searches from selected vocabulary, enhancing classroom learning experiences.
-- **User Authentication**: Includes a login feature for user authentication, ensuring that only registered users can access certain functionalities.
+Content Generation with GPT: Generate ESL quizzes and comprehension questions using OpenAI's GPT models.
 
-## Prerequisites
+Word Search Creation: Create word searches from selected vocabulary.
 
-- Python 3.6 or higher
-- Flask
-- Selenium with ChromeDriver for web automation
-- SMTP server access for email functionalities
-- OpenAI API key
+User Authentication: Secure registration and login for users.
 
-## Installation
+Real-Time Notifications: Receive instant updates on game creation and content generation via Socket.IO.
 
-1. **Clone the repository**:
-   ```sh
-   git clone https://github.com/Dyson1664/Bamboozle_ESL-game.git
-2. pip install -r requirements.txt
-3. Set up a PostgreSQL database and update the database credentials in the `config.py` file.
-## Configuration
+Prerequisites
+Python: 3.6 or higher
 
-### Configure Environment
-Configure the necessary environment variables in a .env file or directly in your system's environment:
-```plaintext
+Google Chrome: For Selenium automation
+
+Chromedriver: Compatible with your Chrome version
+
+PostgreSQL: For database management
+
+OpenAI API Key: For GPT-powered content generation
+
+SMTP Server Access: For email functionalities
+
+Environment Variables: For configuration details
+
+Installation
+Clone the Repository:
+
+bash
+Copy code
+git clone https://github.com/yourusername/yourrepository.git
+cd yourrepository
+Install Dependencies:
+
+bash
+Copy code
+pip install -r requirements.txt
+Set Up Database:
+
+Create a PostgreSQL database.
+Update the DATABASE_URL in your environment variables.
+Configuration
+Create a .env file with the following variables:
+
+ini
+Copy code
+SECRET_KEY=your-secret-key
+DATABASE_URL=your-database-url
 EMAIL=your-email@example.com
 PASSWORD=your-email-password
 API_KEY=your-openai-api-key
-E_PASS=email-password
-E_NAME=email-username
-DATABASE_URL=your-database-url
-```
+E_NAME=your-email@example.com
+E_PASS=your-email-password
+FERNET_KEY=your-fernet-key
+CHROMEDRIVER_PATH=/path/to/chromedriver
+GOOGLE_CHROME_BIN=/path/to/google-chrome
+SECRET_KEY: A secret key for Flask session management.
+DATABASE_URL: Connection string for your PostgreSQL database.
+EMAIL and PASSWORD: Credentials for the email account used to send emails from the app.
+API_KEY: Your OpenAI API key for accessing GPT models.
+FERNET_KEY: A key used by the cryptography library to encrypt sensitive data.
+Running the Application
+Start the Flask application:
 
-Replace each placeholder with your actual data.
-
-### Update ChromeDriver Path
-Update the path to `chromedriver.exe` in the `Driver` class to match your system's ChromeDriver location.
-
-## Running the Application
-After completing the installation and configuration, start the server by running:
-
-```
+bash
+Copy code
 python app.py
-```
-## User Authentication
-### Register
-Navigate to http://localhost:5000/register and enter a username, password, and email to create a new account.
+Access the app at http://localhost:5000.
 
-### Login
-Navigate to http://localhost:5000/login and enter your username and password to log in.
-
-Navigate to http://localhost:5000/ to access the application.
+Usage
+Register: Sign up with a username, password, and email.
+Login: Access your account.
+Select Vocabulary: Choose books, units, and topics.
+Create Games: Generate Baamboozle games, quizzes, and word searches.
+Receive Content: Quizzes and word searches are emailed to you.
