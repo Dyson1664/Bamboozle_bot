@@ -532,114 +532,143 @@ def logout():
 
 
 # main webpag
+import time
+from flask import Flask, render_template, request, session, redirect, url_for, flash, jsonify
+from flask_login import login_required, current_user
+from psycopg2 import DatabaseError
+import postgres_db
+
+
+
+# A simple global cache variable (in production, consider using a more robust solution)
+global_data_cache = None
+cache_last_updated = None
+
+def get_cached_setup_data(force_refresh=False):
+    global global_data_cache, cache_last_updated
+    # Refresh cache every 5 minutes (300 seconds) or if forced
+    if force_refresh or global_data_cache is None or (cache_last_updated is None or (time.time() - cache_last_updated > 300)):
+        # Call your combined setup function from postgres_db
+        global_data_cache = postgres_db.setup_function_combined()
+        cache_last_updated = time.time()
+    return global_data_cache
+
+
 @app.route('/', methods=['GET', 'POST'])
 @login_required
 def book_unit():
+    total_start = time.time()
+    print("book_unit: start")
+
+    # Retrieve user info
     email = current_user.personal_email
     bamboozle_email = current_user.bamboozle_email
     bamboozle_password = current_user.bamboozle_password
-    selected_book, selected_unit, combined_vocab = setup_bookunit()
-    try:
-        book_to_units, books, kg_vocab = setup_function()
 
+    # Setup session variables for book/unit
+    selected_book, selected_unit, combined_vocab = setup_bookunit()
+    print(f"setup_bookunit took: {time.time() - total_start:.3f} seconds")
+
+    # Setup other data from the database (using cache)
+    try:
+        t_setup_function_start = time.time()
+        book_to_units, books, kg_vocab = get_cached_setup_data()
+        t_setup_function_end = time.time()
+        print(f"get_cached_setup_data took: {t_setup_function_end - t_setup_function_start:.3f} seconds")
     except DatabaseError as e:
         print(f"Database error: {e}")
         return render_template('error.html', error_message="Database error occurred.")
 
 
     if request.method == 'POST':
+        t_post_start = time.time()
         selected_book = request.form.get('bookName', 'None')
         selected_unit = request.form.get('unitNumber', 'None')
         session['selected_book'] = selected_book
         session['selected_unit'] = selected_unit
+        print(f"Session update took: {time.time() - t_post_start:.3f} seconds")
 
-        if request.form['action'] == 'bamboozle':
+        action = request.form['action']
+        if action == 'bamboozle':
+            t_bamboozle_start = time.time()
             vocab_words = request.form.get('vocab', '')
             if vocab_words:
                 flash('Creating Bamboozle', 'info')
-                # vocabs = vocab_words.split(', ') if vocab_words else []
-
             title = request.form.get('bamboozleTitle', '')
-            return handle_bamboozle(vocab_words, title, books, book_to_units, kg_vocab, selected_book, selected_unit, bamboozle_email, bamboozle_password)
+            result = handle_bamboozle(vocab_words, title, books, book_to_units, kg_vocab, selected_book, selected_unit, bamboozle_email, bamboozle_password)
+            print(f"handle_bamboozle took: {time.time() - t_bamboozle_start:.3f} seconds")
+            return result
 
-        elif request.form['action'] == 'reviewQuiz':
+        elif action == 'reviewQuiz':
+            t_review_quiz_start = time.time()
             vocabs = request.form.get('vocab', '')
             if vocabs:
                 flash('Creating Review Quiz', 'info')
+            result = handle_review_quiz(vocabs, books, kg_vocab, book_to_units, selected_book, selected_unit, email)
+            print(f"handle_review_quiz took: {time.time() - t_review_quiz_start:.3f} seconds")
+            return result
 
-            return handle_review_quiz(vocabs, books, kg_vocab, book_to_units, selected_book, selected_unit, email)
-
-        elif request.form['action'] == 'ShowVocab':
-
+        elif action == 'ShowVocab':
+            t_show_vocab_start = time.time()
             book = request.form.get('bookName', 'None')
             unit = request.form.get('unitNumber', 'None')
             kg_category = request.form.get('kgTitle', 'KG')
             existing_vocab = request.form.get('vocab', '')
             new_combined_vocab = []
-            # Reset selected_book and selected_unit to 'None' after processing ShowVocab
+            # Reset selected_book to 'None'
             session['selected_book'] = 'None'
             selected_book = 'None'
 
             # Fetch vocab for selected book and unit
             if book != 'None':
                 new_vocab = postgres_db.get_vocab(book, unit)
-
                 new_combined_vocab.extend(new_vocab)
 
             # Fetch vocab for selected kindergarten category
-
             if kg_category != 'NONE':
                 kg_vocab_list = kg_vocab.get(kg_category, [])
-
                 new_combined_vocab.extend(kg_vocab_list)
 
-            # Append new vocab to existing vocab
-
+            # Merge with any existing vocab
             if existing_vocab:
-
                 combined_vocab = ', '.join(filter(None, [existing_vocab, ', '.join(new_combined_vocab)]))
-
             else:
-
-                # combined_vocab = ', '.join(new_combined_vocab)
                 combined_vocab = ', '.join(str(item) for item in new_combined_vocab)
-
+            print(f"handle ShowVocab took: {time.time() - t_show_vocab_start:.3f} seconds")
             return render_template('book_unit.html', vocab=combined_vocab, books=books, book_to_units=book_to_units, kg_vocab=kg_vocab, selected_book=selected_book, selected_unit=selected_unit)
 
-        elif request.form['action'] == "wordSearch":
+        elif action == "wordSearch":
+            t_word_search_start = time.time()
             print(f"Flash messages: {session.get('_flashes', [])}")
-
             vocabs = request.form.get('vocab')
-            # remove spacing for wordsearch to work properly
             compress_vocab = vocabs.replace(' ', '')
             if compress_vocab:
                 flash('Creating Word Search!', 'info')
+                result = handle_wordsearch(vocabs=compress_vocab, normal_vocabs=vocabs, books=books, book_to_units=book_to_units, kg_vocab=kg_vocab, selected_book=selected_book, selected_unit=selected_unit, email=email)
+                print(f"handle_wordsearch took: {time.time() - t_word_search_start:.3f} seconds")
+                return result
 
-                return handle_wordsearch(vocabs=compress_vocab, normal_vocabs=vocabs, books=books, book_to_units=book_to_units, kg_vocab=kg_vocab, selected_book=selected_book, selected_unit=selected_unit, email=email)
-
-
+    total_end = time.time()
+    print(f"Total time in book_unit route: {total_end - total_start:.3f} seconds")
     return render_template('book_unit.html', vocab=combined_vocab, books=books, book_to_units=book_to_units, kg_vocab=kg_vocab, selected_book=selected_book, selected_unit=selected_unit)
-
-#query database for book and coresponding unit vocab
-def setup_function():
-    book_to_units = postgres_db.some_function()
-    books = postgres_db.get_all_books()
-    kg_vocab = postgres_db.make_kg_dict()
-    return book_to_units, books, kg_vocab
 
 
 # Retrieves and initializes session variables for selected book, unit,
 # and combined vocabulary, used in the book unit route.
 def setup_bookunit():
+    t_setup_start = time.time()
     if 'selected_book' not in session or request.method == 'GET':
         session['selected_book'] = 'None'
     if 'selected_unit' not in session or request.method == 'GET':
         session['selected_unit'] = 'None'
-
     selected_book = session.get('selected_book', 'None')
     selected_unit = session.get('selected_unit', 'None')
     combined_vocab = ''
+    print(f"setup_bookunit took: {time.time() - t_setup_start:.3f} seconds")
     return selected_book, selected_unit, combined_vocab
+
+
+
 
 
 
@@ -779,9 +808,9 @@ Please do not include the answers in the quiz. Aim to keep the total length of t
 
 def generate_esl_quiz(prompt, max_tokens=550):
     try:
-        from openai import OpenAI
-        client = OpenAI(api_key=API_KEY)
-        response = client.chat.completions.create(
+        import openai
+        openai.api_key = os.getenv("API_KEY")  # read from environment
+        response = openai.ChatCompletion.create(
             model="gpt-4",
             messages=[
                 {"role": "system", "content": "You are a skilled ESL teacher."},
@@ -793,6 +822,7 @@ def generate_esl_quiz(prompt, max_tokens=550):
         return response.choices[0].message.content.strip()
     except Exception as e:
         return f"An error occurred: {e}"
+
 
 def make_word_search(vocab):
     puzzle = WordSearch(vocab)
