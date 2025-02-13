@@ -40,9 +40,11 @@ ENVIRONMENT = os.getenv('ENVIRONMENT', 'development')
 if ENVIRONMENT == 'production':
     # Production settings
     async_mode = 'gevent'
+    debug = True
 else:
     # Development settings
     async_mode = 'threading'
+    debug = False
 
 socketio = SocketIO(app, async_mode=async_mode, cors_allowed_origins='*')
 login_manager = LoginManager()
@@ -204,18 +206,13 @@ from selenium.webdriver.chrome.options import Options
 import sys
 
 
+ENVIRONMENT = os.getenv('ENVIRONMENT', 'development')
+
 class Driver:
     def __init__(self):
-
-        # sys.stdout.flush()
-
         options = Options()
-        # Set the binary location to the one provided by the buildpack
-        options.binary_location = os.environ.get('GOOGLE_CHROME_BIN')
-        if not options.binary_location:
-            raise Exception('GOOGLE_CHROME_BIN not found in environment variables.')
 
-        # Add your desired options. Old needed because latest version has a problem
+        # Include all the same arguments you mentioned:
         options.add_argument('--headless=old')
         options.add_argument('--disable-gpu')
         options.add_argument('--no-sandbox')
@@ -224,15 +221,28 @@ class Driver:
         options.add_argument('--allow-running-insecure-content')
         options.add_argument('--ignore-certificate-errors')
         options.add_argument('--disable-blink-features=AutomationControlled')
-        options.add_argument('--user-agent=Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.77 Safari/537.36')
+        options.add_argument('--user-agent=Mozilla/5.0 (Windows NT 10.0; Win64; x64) '
+                             'AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.77 Safari/537.36')
 
-        chromedriver_path = os.environ.get('CHROMEDRIVER_PATH', None)
-        if not chromedriver_path:
-            raise Exception('CHROMEDRIVER_PATH not found in environment variables.')
+        if ENVIRONMENT == 'production':
+            service = Service("chromedriver")   # Use chromedriver from PATH
+            # No binary_location here -- let PATH find 'chrome'.
+        else:
+            local_chrome_bin = os.getenv('GOOGLE_CHROME_BIN_LOCAL')
+            local_driver_path = os.getenv('CHROMEDRIVER_PATH_LOCAL')
 
-        chrome_service = Service(executable_path=chromedriver_path)
+            if local_chrome_bin:
+                options.binary_location = local_chrome_bin
 
-        self.driver = webdriver.Chrome(service=chrome_service, options=options)
+            if local_driver_path:
+                service = Service(executable_path=local_driver_path)
+            else:
+                # If you just have chromedriver in your PATH on Windows or Mac:
+                service = Service("chromedriver")
+
+        # Create webdriver:
+        self.driver = webdriver.Chrome(service=service, options=options)
+
 
     def sign_in(self, url, email, password):
         print('1')
@@ -971,8 +981,10 @@ def send_email_with_attachment(to_email, path, content, user_id, file_path=None)
 
 
 if __name__ == '__main__':
+    print(debug)
+
     # socketio.run(app, debug=True, port=5001, use_reloader=False, allow_unsafe_werkzeug=True)
-    socketio.run(app, debug=False)
+    socketio.run(app, debug=debug)
     pass
 
 
