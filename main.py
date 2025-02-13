@@ -204,7 +204,7 @@ from selenium import webdriver
 from selenium.webdriver.chrome.service import Service
 from selenium.webdriver.chrome.options import Options
 import sys
-
+import tempfile
 
 ENVIRONMENT = os.getenv('ENVIRONMENT', 'development')
 
@@ -223,6 +223,10 @@ class Driver:
         options.add_argument('--disable-blink-features=AutomationControlled')
         options.add_argument('--user-agent=Mozilla/5.0 (Windows NT 10.0; Win64; x64) '
                              'AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.77 Safari/537.36')
+
+        # Force a unique user-data-dir for each session:
+        temp_user_dir = tempfile.mkdtemp()
+        options.add_argument(f'--user-data-dir={temp_user_dir}')
 
         if ENVIRONMENT == 'production':
             service = Service("chromedriver")   # Use chromedriver from PATH
