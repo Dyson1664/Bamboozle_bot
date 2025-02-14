@@ -53,10 +53,10 @@ login_manager.login_view = 'login'
 
 DATABASE_URL = os.getenv('DATABASE_URL')
 
-logging.basicConfig(stream=sys.stdout, level=logging.DEBUG,
-                    format='%(asctime)s %(levelname)s: %(message)s',
-                    datefmt='%Y-%m-%d %H:%M:%S')
-logger = logging.getLogger(__name__)
+# logging.basicConfig(stream=sys.stdout, level=logging.DEBUG,
+#                     format='%(asctime)s %(levelname)s: %(message)s',
+#                     datefmt='%Y-%m-%d %H:%M:%S')
+# logger = logging.getLogger(__name__)
 
 def get_db_connection():
     try:
@@ -208,12 +208,17 @@ import tempfile
 
 ENVIRONMENT = os.getenv('ENVIRONMENT', 'development')
 
+
+import logging
+logging.getLogger('selenium').setLevel(logging.WARNING)
+
+
 class Driver:
     def __init__(self):
         options = Options()
 
         # Include all the same arguments you mentioned:
-        options.add_argument('--headless=new')
+        # options.add_argument('--headless=new')
         options.add_argument('--disable-gpu')
         options.add_argument('--no-sandbox')
         options.add_argument('--disable-dev-shm-usage')
@@ -335,6 +340,7 @@ class Driver:
             for vocab in vocabs:
                 if vocab:
                     try:
+                        print(f'Creating: {vocab}')
                         self.questions_search_loop(vocab)
                     except WebDriverException as e:
                         print("Exception occurred while interacting with the element: ", e)
@@ -380,6 +386,7 @@ class Driver:
                     (By.CSS_SELECTOR, "div.giphy-gif:nth-of-type(1) img.giphy-gif-img.giphy-img-loaded"))
             )
             first_image.click()
+            print('first image clicked')
 
         except Exception as e:
             try:
@@ -388,17 +395,16 @@ class Driver:
                         (By.CSS_SELECTOR, "div.giphy-gif:nth-of-type(5) img.giphy-gif-img.giphy-img-loaded"))
                 )
                 fifth_image.click()
+                print('fifth image clicked after first image not able to. Didnt close reopen')
 
             except Exception as e:
-                print('close/re-open')
+                print('calling close/re-open')
                 sleep(1)
                 self.close_reopen()
-                print('Couldn\'t click first pic. Had to close and reopen', e)
                 sleep(2)
 
 
 
-            print('Could not click first image')
 
 
 
@@ -410,6 +416,7 @@ class Driver:
 
     def close_reopen(self):
         try:
+            print('trying to close reopen')
             close_button = WebDriverWait(self.driver, 10).until(
                 EC.element_to_be_clickable((By.CLASS_NAME, 'close-gif'))
             )
@@ -427,6 +434,7 @@ class Driver:
                         (By.CSS_SELECTOR, "div.giphy-gif:nth-of-type(6) img.giphy-gif-img.giphy-img-loaded"))
                 )
                 sixth_image.click()
+                print('clicked 6th image')
 
             except Exception as e:
                 fifth_image = WebDriverWait(self.driver, 15).until(
@@ -435,7 +443,7 @@ class Driver:
                 )
                 fifth_image.click()
 
-                print('Could not even click 5th image', e)
+                print('clicked 6th image', e)
 
         except WebDriverException as e:
             print("Exception occurred while closing the popup: ", e)
@@ -985,7 +993,6 @@ def send_email_with_attachment(to_email, path, content, user_id, file_path=None)
 
 
 if __name__ == '__main__':
-    print(debug)
 
     # socketio.run(app, debug=True, port=5001, use_reloader=False, allow_unsafe_werkzeug=True)
     socketio.run(app, debug=debug)
