@@ -211,7 +211,8 @@ ENVIRONMENT = os.getenv('ENVIRONMENT', 'development')
 
 import logging
 logging.getLogger('selenium').setLevel(logging.WARNING)
-
+import base64
+import time
 
 class Driver:
     def __init__(self):
