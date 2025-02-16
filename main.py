@@ -317,13 +317,13 @@ class Driver:
         except WebDriverException as e:
             print("Exception occurred while interacting with the element: ", e)
 
-    def capture_screenshot_and_print_base64(driver, label=""):
+    def capture_screenshot_and_print_base64(self, label=""):
         """
         Saves a screenshot to /tmp, converts to Base64, and prints to logs.
         You can then copy from heroku logs and decode locally.
         """
         screenshot_path = f"/tmp/error_screenshot_{time.time()}.png"
-        driver.save_screenshot(screenshot_path)
+        self.driver.save_screenshot(screenshot_path)
         print(f"{label} - Screenshot saved at: {screenshot_path}")
 
         try:
@@ -416,7 +416,7 @@ class Driver:
 
                 except Exception as e_first:
                     print(f"Failed to click FIRST image: {e_first}")
-                    capture_screenshot_and_print_base64(self.driver, label="FIRST_IMAGE_ERROR")
+                    self.screenshot_and_print_base64(self.driver, label="FIRST_IMAGE_ERROR")
 
                     # 4) Try the fifth image
                     try:
@@ -430,7 +430,7 @@ class Driver:
 
                     except Exception as e_fifth:
                         print(f"Failed to click FIFTH image: {e_fifth}")
-                        capture_screenshot_and_print_base64(self.driver, label="FIFTH_IMAGE_ERROR")
+                        self.capture_screenshot_and_print_base64(self.driver, label="FIFTH_IMAGE_ERROR")
 
                         print("Both first & fifth failed, calling close_reopen()...")
                         success = self.close_reopen()
@@ -448,7 +448,7 @@ class Driver:
 
             except Exception as e_outer:
                 print(f"Exception opening library or waiting for images: {e_outer}")
-                capture_screenshot_and_print_base64(self.driver, label="OPEN_LIBRARY_ERROR")
+                self.capture_screenshot_and_print_base64(self.driver, label="OPEN_LIBRARY_ERROR")
                 self.close_reopen()
                 if attempt < 2:
                     sleep(2)
