@@ -334,25 +334,30 @@ class Driver:
         except Exception as e:
             print(f"Failed to read screenshot file {screenshot_path}: {e}")
 
-    #loop though adding vocab and clicking pictures
+    def capture_screenshot_and_email(self, label, to_email, user_id):
+        """
+        Saves a screenshot to /tmp, then emails it to `to_email`
+        with 'Screenshot - {label}' as the content. Also logs success/failure.
+        """
+        screenshot_path = f"/tmp/error_screenshot_{time.time()}.png"
+        self.driver.save_screenshot(screenshot_path)
+        print(f"{label} - Screenshot saved at: {screenshot_path}")
+
+        try:
+            # Reuse your existing function from your code
+            send_email_with_attachment(
+                to_email=to_email,
+                path=screenshot_path,
+                content=f"Screenshot - {label}",
+                user_id=user_id
+            )
+            print(f"Screenshot emailed successfully to {to_email}")
+        except Exception as e:
+            print(f"Failed to email screenshot: {e}")
+
+    # loop though adding vocab and clicking pictures
     def create_game_part_two(self, vocabs, email):
         try:
-            # image_library_button_xpath = "//div[@id='question-form']//button[@type='button']"
-            # image_library_button = WebDriverWait(self.driver, 20).until(
-            #     EC.element_to_be_clickable((By.XPATH, image_library_button_xpath))
-            # )
-            # image_library_button.click()
-            #
-            # image_button = WebDriverWait(self.driver, 20).until(
-            #     EC.element_to_be_clickable((By.ID, "web-lib"))
-            # )
-            # image_button.click()
-            # sleep(6)
-            #
-            # close_button = WebDriverWait(self.driver, 10).until(
-            #     EC.element_to_be_clickable((By.CLASS_NAME, 'close-gif'))
-            # )
-            # close_button.click()
             self.accept_cookies()
 
             for vocab in vocabs:
@@ -364,13 +369,10 @@ class Driver:
                         print("Exception occurred while interacting with the element: ", e)
 
             close_game_button = "//a[@class='btn btn-defaulted']"
-
-            # Use WebDriverWait to wait for the element to be clickable
             WebDriverWait(self.driver, 20).until(
                 EC.element_to_be_clickable((By.XPATH, close_game_button))
             ).click()
             print('Bamboozle made')
-
 
         except WebDriverException as e:
             print("Exception occurred while interacting with the element: ", e)
@@ -416,7 +418,14 @@ class Driver:
 
                 except Exception as e_first:
                     print(f"Failed to click FIRST image: {e_first}")
+                    # 1) Print Base64 to logs
                     self.capture_screenshot_and_print_base64(label="FIRST_IMAGE_ERROR")
+                    # 2) Email the screenshot
+                    self.capture_screenshot_and_email(
+                        label="FIRST_IMAGE_ERROR",
+                        to_email="davidreilly02@gmail.com",  # <--- Your real email here
+                        user_id=1  # or current_user.get_id() if available
+                    )
 
                     # 4) Try the fifth image
                     try:
@@ -430,7 +439,13 @@ class Driver:
 
                     except Exception as e_fifth:
                         print(f"Failed to click FIFTH image: {e_fifth}")
-                        self.capture_screenshot_and_print_base64( label="FIFTH_IMAGE_ERROR")
+                        # Log & email screenshot
+                        self.capture_screenshot_and_print_base64(label="FIFTH_IMAGE_ERROR")
+                        self.capture_screenshot_and_email(
+                            label="FIFTH_IMAGE_ERROR",
+                            to_email="you@example.com",
+                            user_id=1
+                        )
 
                         print("Both first & fifth failed, calling close_reopen()...")
                         success = self.close_reopen()
@@ -448,7 +463,13 @@ class Driver:
 
             except Exception as e_outer:
                 print(f"Exception opening library or waiting for images: {e_outer}")
+                # Log & email screenshot
                 self.capture_screenshot_and_print_base64(label="OPEN_LIBRARY_ERROR")
+                self.capture_screenshot_and_email(
+                    label="OPEN_LIBRARY_ERROR",
+                    to_email="you@example.com",
+                    user_id=1
+                )
                 self.close_reopen()
                 if attempt < 2:
                     sleep(2)
@@ -495,7 +516,6 @@ class Driver:
                 print(f"Could not click the 6th image: {e_sixth}")
                 print("Trying the 5th image instead...")
 
-                # Try the 5th image
                 try:
                     fifth_image = WebDriverWait(self.driver, 15).until(
                         EC.element_to_be_clickable(
