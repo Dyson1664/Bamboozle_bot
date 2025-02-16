@@ -416,7 +416,7 @@ class Driver:
 
                 except Exception as e_first:
                     print(f"Failed to click FIRST image: {e_first}")
-                    self.screenshot_and_print_base64(self.driver, label="FIRST_IMAGE_ERROR")
+                    self.capture_screenshot_and_print_base64(label="FIRST_IMAGE_ERROR")
 
                     # 4) Try the fifth image
                     try:
@@ -430,7 +430,7 @@ class Driver:
 
                     except Exception as e_fifth:
                         print(f"Failed to click FIFTH image: {e_fifth}")
-                        self.capture_screenshot_and_print_base64(self.driver, label="FIFTH_IMAGE_ERROR")
+                        self.capture_screenshot_and_print_base64( label="FIFTH_IMAGE_ERROR")
 
                         print("Both first & fifth failed, calling close_reopen()...")
                         success = self.close_reopen()
@@ -448,7 +448,7 @@ class Driver:
 
             except Exception as e_outer:
                 print(f"Exception opening library or waiting for images: {e_outer}")
-                self.capture_screenshot_and_print_base64(self.driver, label="OPEN_LIBRARY_ERROR")
+                self.capture_screenshot_and_print_base64(label="OPEN_LIBRARY_ERROR")
                 self.close_reopen()
                 if attempt < 2:
                     sleep(2)
