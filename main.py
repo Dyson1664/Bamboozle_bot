@@ -316,6 +316,23 @@ class Driver:
         except WebDriverException as e:
             print("Exception occurred while interacting with the element: ", e)
 
+    def capture_screenshot_and_print_base64(driver, label=""):
+        """
+        Saves a screenshot to /tmp, converts to Base64, and prints to logs.
+        You can then copy from heroku logs and decode locally.
+        """
+        screenshot_path = f"/tmp/error_screenshot_{time.time()}.png"
+        driver.save_screenshot(screenshot_path)
+        print(f"{label} - Screenshot saved at: {screenshot_path}")
+
+        try:
+            with open(screenshot_path, "rb") as f:
+                encoded = base64.b64encode(f.read()).decode("utf-8")
+            # Print to logs so it appears in `heroku logs`
+            print(f"{label} - SCREENSHOT_BASE64: {encoded}")
+        except Exception as e:
+            print(f"Failed to read screenshot file {screenshot_path}: {e}")
+
     #loop though adding vocab and clicking pictures
     def create_game_part_two(self, vocabs, email):
         try:
@@ -371,7 +388,6 @@ class Driver:
         vocab_box.send_keys(vocabs)
         sleep(1)
 
-        # Try up to 3 times to open image library and click images
         for attempt in range(3):
             print(f"--- Attempt {attempt + 1} ---")
             try:
@@ -381,13 +397,13 @@ class Driver:
                     EC.element_to_be_clickable((By.XPATH, image_library_button_xpath))
                 ).click()
 
-                # 2) Wait for images to appear
-                WebDriverWait(self.driver, 18).until(
+                # 2) Wait for images
+                WebDriverWait(self.driver, 30).until(
                     EC.presence_of_all_elements_located(
                         (By.CSS_SELECTOR, "div.giphy-gif img.giphy-gif-img.giphy-img-loaded"))
                 )
 
-                # 3) Try first image
+                # 3) Try the first image
                 try:
                     first_image = WebDriverWait(self.driver, 15).until(
                         EC.element_to_be_clickable(
@@ -395,13 +411,13 @@ class Driver:
                     )
                     first_image.click()
                     print("Clicked FIRST image successfully.")
-                    break  # success, break out of loop
+                    break  # success
 
                 except Exception as e_first:
                     print(f"Failed to click FIRST image: {e_first}")
-                    print("Trying the 5th image...")
+                    capture_screenshot_and_print_base64(self.driver, label="FIRST_IMAGE_ERROR")
 
-                    # 4) Try fifth image if first fails
+                    # 4) Try the fifth image
                     try:
                         fifth_image = WebDriverWait(self.driver, 15).until(
                             EC.element_to_be_clickable(
@@ -409,29 +425,29 @@ class Driver:
                         )
                         fifth_image.click()
                         print("Clicked FIFTH image successfully.")
-                        break  # success, break out of loop
+                        break
 
                     except Exception as e_fifth:
                         print(f"Failed to click FIFTH image: {e_fifth}")
-                        print("Both first & fifth failed, calling close_reopen()...")
+                        capture_screenshot_and_print_base64(self.driver, label="FIFTH_IMAGE_ERROR")
 
-                        # 5) Call close_reopen and see if it succeeds
+                        print("Both first & fifth failed, calling close_reopen()...")
                         success = self.close_reopen()
                         if success:
-                            print("close_reopen() succeeded in clicking 5th/6th, break out of loop.")
-                            break  # we are done, no further attempts needed
+                            print("close_reopen() succeeded, break out of loop.")
+                            break
                         else:
                             print("close_reopen() failed too.")
-                            if attempt < 2:  # if not last attempt
+                            if attempt < 2:
                                 sleep(2)
                                 continue
                             else:
                                 print("No more attempts left.")
                                 break
 
-            except Exception as e:
-                print(f"Exception opening library or waiting for images: {e}")
-                # Optionally try close_reopen() or just end
+            except Exception as e_outer:
+                print(f"Exception opening library or waiting for images: {e_outer}")
+                capture_screenshot_and_print_base64(self.driver, label="OPEN_LIBRARY_ERROR")
                 self.close_reopen()
                 if attempt < 2:
                     sleep(2)
@@ -439,7 +455,7 @@ class Driver:
                 else:
                     break
 
-        # After we either succeeded or ran out of attempts, click SAVE
+        # Finally, click 'Save'
         save_button = WebDriverWait(self.driver, 10).until(
             EC.element_to_be_clickable((By.ID, "tally"))
         )
