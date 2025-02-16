@@ -218,7 +218,7 @@ class Driver:
         options = Options()
 
         # Include all the same arguments you mentioned:
-        options.add_argument('--headless=new')
+        # options.add_argument('--headless=new')
         options.add_argument('--disable-gpu')
         options.add_argument('--no-sandbox')
         options.add_argument('--disable-dev-shm-usage')
@@ -361,60 +361,96 @@ class Driver:
         input_box = WebDriverWait(self.driver, 10).until(
             EC.element_to_be_clickable((By.ID, "problem"))
         )
-        input_box.click()
         input_box.clear()
         input_box.send_keys('What is it?')
 
         vocab_box = WebDriverWait(self.driver, 10).until(
             EC.element_to_be_clickable((By.ID, "solution1"))
         )
-        vocab_box.click()
         vocab_box.clear()
         vocab_box.send_keys(vocabs)
         sleep(1)
 
-
-        image_library_button_xpath = "//div[@id='question-form']//button[@type='button']"
-        WebDriverWait(self.driver, 20).until(
-            EC.element_to_be_clickable((By.XPATH, image_library_button_xpath))
-        ).click()
-        sleep(1)
-
-        try:
-            first_image = WebDriverWait(self.driver, 15).until(
-                EC.element_to_be_clickable(
-                    (By.CSS_SELECTOR, "div.giphy-gif:nth-of-type(1) img.giphy-gif-img.giphy-img-loaded"))
-            )
-            first_image.click()
-            print('first image clicked')
-
-        except Exception as e:
+        # Try up to 3 times to open image library and click images
+        for attempt in range(3):
+            print(f"--- Attempt {attempt + 1} ---")
             try:
-                fifth_image = WebDriverWait(self.driver, 15).until(
-                    EC.element_to_be_clickable(
-                        (By.CSS_SELECTOR, "div.giphy-gif:nth-of-type(5) img.giphy-gif-img.giphy-img-loaded"))
+                # 1) Open image library
+                image_library_button_xpath = "//div[@id='question-form']//button[@type='button']"
+                WebDriverWait(self.driver, 20).until(
+                    EC.element_to_be_clickable((By.XPATH, image_library_button_xpath))
+                ).click()
+
+                # 2) Wait for images to appear
+                WebDriverWait(self.driver, 18).until(
+                    EC.presence_of_all_elements_located(
+                        (By.CSS_SELECTOR, "div.giphy-gif img.giphy-gif-img.giphy-img-loaded"))
                 )
-                fifth_image.click()
-                print('fifth image clicked after first image not able to. Didnt close reopen')
+
+                # 3) Try first image
+                try:
+                    first_image = WebDriverWait(self.driver, 15).until(
+                        EC.element_to_be_clickable(
+                            (By.CSS_SELECTOR, "div.giphy-gif:nth-of-type(1) img.giphy-gif-img.giphy-img-loaded"))
+                    )
+                    first_image.click()
+                    print("Clicked FIRST image successfully.")
+                    break  # success, break out of loop
+
+                except Exception as e_first:
+                    print(f"Failed to click FIRST image: {e_first}")
+                    print("Trying the 5th image...")
+
+                    # 4) Try fifth image if first fails
+                    try:
+                        fifth_image = WebDriverWait(self.driver, 15).until(
+                            EC.element_to_be_clickable(
+                                (By.CSS_SELECTOR, "div.giphy-gif:nth-of-type(5) img.giphy-gif-img.giphy-img-loaded"))
+                        )
+                        fifth_image.click()
+                        print("Clicked FIFTH image successfully.")
+                        break  # success, break out of loop
+
+                    except Exception as e_fifth:
+                        print(f"Failed to click FIFTH image: {e_fifth}")
+                        print("Both first & fifth failed, calling close_reopen()...")
+
+                        # 5) Call close_reopen and see if it succeeds
+                        success = self.close_reopen()
+                        if success:
+                            print("close_reopen() succeeded in clicking 5th/6th, break out of loop.")
+                            break  # we are done, no further attempts needed
+                        else:
+                            print("close_reopen() failed too.")
+                            if attempt < 2:  # if not last attempt
+                                sleep(2)
+                                continue
+                            else:
+                                print("No more attempts left.")
+                                break
 
             except Exception as e:
-                print('calling close/re-open')
-                sleep(1)
+                print(f"Exception opening library or waiting for images: {e}")
+                # Optionally try close_reopen() or just end
                 self.close_reopen()
-                sleep(2)
+                if attempt < 2:
+                    sleep(2)
+                    continue
+                else:
+                    break
 
-
-
-
-
-
+        # After we either succeeded or ran out of attempts, click SAVE
         save_button = WebDriverWait(self.driver, 10).until(
             EC.element_to_be_clickable((By.ID, "tally"))
         )
         save_button.click()
-
+        print("Tally (Save) clicked.")
 
     def close_reopen(self):
+        """
+        Close the popup, re-open, and attempt to click the 6th image;
+        if that fails, try the 5th. Return True if successful, False otherwise.
+        """
         try:
             print('trying to close reopen')
             close_button = WebDriverWait(self.driver, 10).until(
@@ -422,31 +458,43 @@ class Driver:
             )
             close_button.click()
 
-
+            # Re-open the image library
             image_library_button_xpath = "//div[@id='question-form']//button[@type='button']"
             WebDriverWait(self.driver, 20).until(
                 EC.element_to_be_clickable((By.XPATH, image_library_button_xpath))
             ).click()
 
+            # Attempt the 6th image first
             try:
                 sixth_image = WebDriverWait(self.driver, 15).until(
                     EC.element_to_be_clickable(
                         (By.CSS_SELECTOR, "div.giphy-gif:nth-of-type(6) img.giphy-gif-img.giphy-img-loaded"))
                 )
                 sixth_image.click()
-                print('clicked 6th image')
+                print('clicked 6th image in close_reopen')
+                return True
 
-            except Exception as e:
-                fifth_image = WebDriverWait(self.driver, 15).until(
-                    EC.element_to_be_clickable(
-                        (By.CSS_SELECTOR, "div.giphy-gif:nth-of-type(5) img.giphy-gif-img.giphy-img-loaded"))
-                )
-                fifth_image.click()
+            except Exception as e_sixth:
+                print(f"Could not click the 6th image: {e_sixth}")
+                print("Trying the 5th image instead...")
 
-                print('clicked 6th image', e)
+                # Try the 5th image
+                try:
+                    fifth_image = WebDriverWait(self.driver, 15).until(
+                        EC.element_to_be_clickable(
+                            (By.CSS_SELECTOR, "div.giphy-gif:nth-of-type(5) img.giphy-gif-img.giphy-img-loaded"))
+                    )
+                    fifth_image.click()
+                    print('clicked 5th image in close_reopen')
+                    return True
+
+                except Exception as e_fifth:
+                    print(f"Could not click the 5th image: {e_fifth}")
+                    return False  # Both 6th and 5th failed
 
         except WebDriverException as e:
-            print("Exception occurred while closing the popup: ", e)
+            print("Exception occurred while closing the popup or re-opening: ", e)
+            return False
 
     def accept_cookies(self):
         try:
