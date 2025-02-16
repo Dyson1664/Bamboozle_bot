@@ -443,7 +443,7 @@ class Driver:
                         self.capture_screenshot_and_print_base64(label="FIFTH_IMAGE_ERROR")
                         self.capture_screenshot_and_email(
                             label="FIFTH_IMAGE_ERROR",
-                            to_email="you@example.com",
+                            to_email="davidreilly02@gmail.com",
                             user_id=1
                         )
 
@@ -467,7 +467,7 @@ class Driver:
                 self.capture_screenshot_and_print_base64(label="OPEN_LIBRARY_ERROR")
                 self.capture_screenshot_and_email(
                     label="OPEN_LIBRARY_ERROR",
-                    to_email="you@example.com",
+                    to_email="davidreilly02@gmail.com",
                     user_id=1
                 )
                 self.close_reopen()
