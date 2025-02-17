@@ -378,11 +378,13 @@ class Driver:
             print("Exception occurred while interacting with the element: ", e)
 
     def questions_search_loop(self, vocab):
+        print(f'starting questions_search_loop')
         input_box = WebDriverWait(self.driver, 10).until(
             EC.element_to_be_clickable((By.ID, "problem"))
         )
         input_box.clear()
         input_box.send_keys('What is it?')
+        print('entered what is it?')
 
         vocab_box = WebDriverWait(self.driver, 10).until(
             EC.element_to_be_clickable((By.ID, "solution1"))
@@ -390,6 +392,7 @@ class Driver:
         vocab_box.clear()
         vocab_box.send_keys(vocab)
         sleep(1)
+        print(f'entered {vocab} in box')
 
         for attempt in range(3):
             print(f"--- Attempt {attempt + 1} ---")
