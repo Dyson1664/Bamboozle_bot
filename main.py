@@ -317,18 +317,25 @@ class Driver:
         except WebDriverException as e:
             print("Exception occurred while interacting with the element: ", e)
 
-
     def capture_screenshot_and_email(self, label, to_email, user_id):
         """
         Saves a screenshot to /tmp, then emails it to `to_email`
         with 'Screenshot - {label}' as the content. Also logs success/failure.
         """
+        import os
+        import time
+
         screenshot_path = f"/tmp/error_screenshot_{time.time()}.png"
-        self.driver.save_screenshot(screenshot_path)
-        print(f"{label} - Screenshot saved at: {screenshot_path}")
+
+        # Try saving the screenshot and check if it was successful.
+        if self.driver.save_screenshot(screenshot_path):
+            print(f"{label} - Screenshot saved at: {screenshot_path}")
+        else:
+            print(f"{label} - Failed to save screenshot at: {screenshot_path}")
+            return  # Exit if screenshot wasn’t saved
 
         try:
-            # Reuse your existing function from your code
+            # Attempt to send the email with the screenshot attachment.
             send_email_with_attachment(
                 to_email=to_email,
                 path=screenshot_path,
@@ -338,6 +345,14 @@ class Driver:
             print(f"Screenshot emailed successfully to {to_email}")
         except Exception as e:
             print(f"Failed to email screenshot: {e}")
+        finally:
+            # Only delete the screenshot if it exists.
+            if os.path.exists(screenshot_path):
+                try:
+                    os.remove(screenshot_path)
+                    print(f"{screenshot_path} deleted successfully.")
+                except Exception as del_e:
+                    print(f"Error deleting screenshot: {del_e}")
 
     # loop though adding vocab and clicking pictures
     def create_game_part_two(self, vocabs, email):
@@ -387,52 +402,51 @@ class Driver:
                 # 2) Wait for images
                 WebDriverWait(self.driver, 30).until(
                     EC.presence_of_all_elements_located(
-                        (By.CSS_SELECTOR, "div.giphy-gif img.giphy-gif-img.giphy-img-loaded"))
+                        (By.CSS_SELECTOR, "div.giphy-gif img.giphy-gif-img.giphy-img-loaded")
+                    )
                 )
 
                 # 3) Try the first image
                 try:
                     first_image = WebDriverWait(self.driver, 15).until(
                         EC.element_to_be_clickable(
-                            (By.CSS_SELECTOR, "div.giphy-gif:nth-of-type(1) img.giphy-gif-img.giphy-img-loaded"))
+                            (By.CSS_SELECTOR, "div.giphy-gif:nth-of-type(1) img.giphy-gif-img.giphy-img-loaded")
+                        )
                     )
                     first_image.click()
                     print(f"Clicked FIRST image of {vocab} successfully.")
-                    break  # success
+                    break  # Success; exit the attempt loop
 
                 except Exception as e_first:
-                    print(f"Failed to click FIRST image: of {vocab}. error: {e_first}")
-                    # 2) Email the screenshot
+                    print(f"Failed to click FIRST image of {vocab}. Error: {e_first}")
                     self.capture_screenshot_and_email(
                         label=f"FIRST_IMAGE_ERROR--{vocab}",
-                        to_email="davidreilly02@gmail.com",  # <--- Your real email here
-                        user_id=1  # or current_user.get_id() if available
+                        to_email="davidreilly02@gmail.com",
+                        user_id=1
                     )
 
                     # 4) Try the fifth image
                     try:
                         fifth_image = WebDriverWait(self.driver, 15).until(
                             EC.element_to_be_clickable(
-                                (By.CSS_SELECTOR, "div.giphy-gif:nth-of-type(5) img.giphy-gif-img.giphy-img-loaded"))
+                                (By.CSS_SELECTOR, "div.giphy-gif:nth-of-type(5) img.giphy-gif-img.giphy-img-loaded")
+                            )
                         )
                         fifth_image.click()
                         print(f"Clicked FIFTH image of {vocab} successfully.")
-                        break
+                        break  # Success; exit the loop
 
                     except Exception as e_fifth:
-                        print(f"Failed to click FIFTH image: {e_fifth}")
-                        # Log & email screenshot
+                        print(f"Failed to click FIFTH image of {vocab}. Error: {e_fifth}")
                         self.capture_screenshot_and_email(
                             label=f"FIFTH_IMAGE_ERROR--{vocab}",
                             to_email="davidreilly02@gmail.com",
                             user_id=1
                         )
-
                         print("Both first & fifth failed, calling close_reopen()...")
-                        success = self.close_reopen(vocab)
-                        if success:
-                            print("close_reopen() succeeded, break out of loop.")
-                            break
+                        if self.close_reopen(vocab):
+                            print("close_reopen() succeeded, breaking out of loop.")
+                            break  # Break out since close_reopen handled the image click
                         else:
                             print("close_reopen() failed too.")
                             if attempt < 2:
@@ -443,19 +457,21 @@ class Driver:
                                 break
 
             except Exception as e_outer:
-                print(f"Exception opening library or waiting for images: {e_outer}")
-                # Log & email screenshot
+                print(f"Exception opening library or waiting for images for {vocab}: {e_outer}")
                 self.capture_screenshot_and_email(
                     label=f"OPEN_LIBRARY_ERROR--{vocab}",
                     to_email="davidreilly02@gmail.com",
                     user_id=1
                 )
-                self.close_reopen()
-                if attempt < 2:
-                    sleep(2)
-                    continue
-                else:
+                if self.close_reopen(vocab):
+                    print("close_reopen() succeeded, breaking out of loop.")
                     break
+                else:
+                    if attempt < 2:
+                        sleep(2)
+                        continue
+                    else:
+                        break
 
         # Finally, click 'Save'
         save_button = WebDriverWait(self.driver, 10).until(
