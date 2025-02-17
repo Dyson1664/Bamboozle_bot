@@ -377,7 +377,7 @@ class Driver:
         except WebDriverException as e:
             print("Exception occurred while interacting with the element: ", e)
 
-    def questions_search_loop(self, vocabs):
+    def questions_search_loop(self, vocab):
         input_box = WebDriverWait(self.driver, 10).until(
             EC.element_to_be_clickable((By.ID, "problem"))
         )
@@ -413,16 +413,16 @@ class Driver:
                             (By.CSS_SELECTOR, "div.giphy-gif:nth-of-type(1) img.giphy-gif-img.giphy-img-loaded"))
                     )
                     first_image.click()
-                    print("Clicked FIRST image successfully.")
+                    print(f"Clicked FIRST image of {vocab} successfully.")
                     break  # success
 
                 except Exception as e_first:
-                    print(f"Failed to click FIRST image: {e_first}")
+                    print(f"Failed to click FIRST image: of {vocab}. error: {e_first}")
                     # 1) Print Base64 to logs
                     self.capture_screenshot_and_print_base64(label="FIRST_IMAGE_ERROR")
                     # 2) Email the screenshot
                     self.capture_screenshot_and_email(
-                        label="FIRST_IMAGE_ERROR",
+                        label=f"FIRST_IMAGE_ERROR--{vocab}",
                         to_email="davidreilly02@gmail.com",  # <--- Your real email here
                         user_id=1  # or current_user.get_id() if available
                     )
@@ -434,7 +434,7 @@ class Driver:
                                 (By.CSS_SELECTOR, "div.giphy-gif:nth-of-type(5) img.giphy-gif-img.giphy-img-loaded"))
                         )
                         fifth_image.click()
-                        print("Clicked FIFTH image successfully.")
+                        print(f"Clicked FIFTH image of {vocab} successfully.")
                         break
 
                     except Exception as e_fifth:
@@ -442,13 +442,13 @@ class Driver:
                         # Log & email screenshot
                         self.capture_screenshot_and_print_base64(label="FIFTH_IMAGE_ERROR")
                         self.capture_screenshot_and_email(
-                            label="FIFTH_IMAGE_ERROR",
+                            label=f"FIFTH_IMAGE_ERROR--{vocab}",
                             to_email="davidreilly02@gmail.com",
                             user_id=1
                         )
 
                         print("Both first & fifth failed, calling close_reopen()...")
-                        success = self.close_reopen()
+                        success = self.close_reopen(vocab)
                         if success:
                             print("close_reopen() succeeded, break out of loop.")
                             break
@@ -466,7 +466,7 @@ class Driver:
                 # Log & email screenshot
                 self.capture_screenshot_and_print_base64(label="OPEN_LIBRARY_ERROR")
                 self.capture_screenshot_and_email(
-                    label="OPEN_LIBRARY_ERROR",
+                    label=f"OPEN_LIBRARY_ERROR--{vocab}",
                     to_email="davidreilly02@gmail.com",
                     user_id=1
                 )
@@ -484,7 +484,7 @@ class Driver:
         save_button.click()
         print("Tally (Save) clicked.")
 
-    def close_reopen(self):
+    def close_reopen(self, vocab):
         """
         Close the popup, re-open, and attempt to click the 6th image;
         if that fails, try the 5th. Return True if successful, False otherwise.
@@ -509,11 +509,11 @@ class Driver:
                         (By.CSS_SELECTOR, "div.giphy-gif:nth-of-type(6) img.giphy-gif-img.giphy-img-loaded"))
                 )
                 sixth_image.click()
-                print('clicked 6th image in close_reopen')
+                print(f'clicked 6th image of {vocab} in close_reopen')
                 return True
 
             except Exception as e_sixth:
-                print(f"Could not click the 6th image: {e_sixth}")
+                print(f"Could not click the 6th image of {vocab}: {e_sixth}")
                 print("Trying the 5th image instead...")
 
                 try:
@@ -522,7 +522,7 @@ class Driver:
                             (By.CSS_SELECTOR, "div.giphy-gif:nth-of-type(5) img.giphy-gif-img.giphy-img-loaded"))
                     )
                     fifth_image.click()
-                    print('clicked 5th image in close_reopen')
+                    print(f'clicked 5th image of {vocab} in close_reopen')
                     return True
 
                 except Exception as e_fifth:
@@ -542,7 +542,7 @@ class Driver:
             cookie_button.click()
             print('Cookies closed')
 
-
+            #removed from bamboozle website
             # close_gpt = WebDriverWait(self.driver, 5).until(
             #     EC.element_to_be_clickable(
             #         (By.XPATH, "//*[@id=\"beamerAnnouncementBar\"]/div[2]/div[2]")
