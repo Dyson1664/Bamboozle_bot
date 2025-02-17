@@ -379,11 +379,13 @@ class Driver:
 
     def questions_search_loop(self, vocab):
         print(f'starting questions_search_loop')
-        self.capture_screenshot_and_email(
-            label=f"error was here--{vocab}",
-            to_email="davidreilly02@gmail.com",
-            user_id=1
-        )
+        sleep(2)
+        # only change made
+        # self.capture_screenshot_and_email(
+        #     label=f"error was here--{vocab}",
+        #     to_email="davidreilly02@gmail.com",
+        #     user_id=1
+        # )
         input_box = WebDriverWait(self.driver, 10).until(
             EC.element_to_be_clickable((By.ID, "problem"))
         )
