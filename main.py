@@ -317,22 +317,6 @@ class Driver:
         except WebDriverException as e:
             print("Exception occurred while interacting with the element: ", e)
 
-    def capture_screenshot_and_print_base64(self, label=""):
-        """
-        Saves a screenshot to /tmp, converts to Base64, and prints to logs.
-        You can then copy from heroku logs and decode locally.
-        """
-        screenshot_path = f"/tmp/error_screenshot_{time.time()}.png"
-        self.driver.save_screenshot(screenshot_path)
-        print(f"{label} - Screenshot saved at: {screenshot_path}")
-
-        try:
-            with open(screenshot_path, "rb") as f:
-                encoded = base64.b64encode(f.read()).decode("utf-8")
-            # Print to logs so it appears in `heroku logs`
-            print(f"{label} - SCREENSHOT_BASE64: {encoded}")
-        except Exception as e:
-            print(f"Failed to read screenshot file {screenshot_path}: {e}")
 
     def capture_screenshot_and_email(self, label, to_email, user_id):
         """
@@ -388,7 +372,7 @@ class Driver:
             EC.element_to_be_clickable((By.ID, "solution1"))
         )
         vocab_box.clear()
-        vocab_box.send_keys(vocabs)
+        vocab_box.send_keys(vocab)
         sleep(1)
 
         for attempt in range(3):
@@ -418,8 +402,6 @@ class Driver:
 
                 except Exception as e_first:
                     print(f"Failed to click FIRST image: of {vocab}. error: {e_first}")
-                    # 1) Print Base64 to logs
-                    self.capture_screenshot_and_print_base64(label="FIRST_IMAGE_ERROR")
                     # 2) Email the screenshot
                     self.capture_screenshot_and_email(
                         label=f"FIRST_IMAGE_ERROR--{vocab}",
@@ -440,7 +422,6 @@ class Driver:
                     except Exception as e_fifth:
                         print(f"Failed to click FIFTH image: {e_fifth}")
                         # Log & email screenshot
-                        self.capture_screenshot_and_print_base64(label="FIFTH_IMAGE_ERROR")
                         self.capture_screenshot_and_email(
                             label=f"FIFTH_IMAGE_ERROR--{vocab}",
                             to_email="davidreilly02@gmail.com",
@@ -464,7 +445,6 @@ class Driver:
             except Exception as e_outer:
                 print(f"Exception opening library or waiting for images: {e_outer}")
                 # Log & email screenshot
-                self.capture_screenshot_and_print_base64(label="OPEN_LIBRARY_ERROR")
                 self.capture_screenshot_and_email(
                     label=f"OPEN_LIBRARY_ERROR--{vocab}",
                     to_email="davidreilly02@gmail.com",
