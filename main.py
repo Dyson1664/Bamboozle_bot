@@ -227,6 +227,7 @@ class Driver:
         options.add_argument('--allow-running-insecure-content')
         options.add_argument('--ignore-certificate-errors')
         options.add_argument('--disable-blink-features=AutomationControlled')
+        options.add_argument("--window-size=1920,1080")
         options.add_argument('--user-agent=Mozilla/5.0 (Windows NT 10.0; Win64; x64) '
                              'AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.77 Safari/537.36')
 
@@ -486,6 +487,8 @@ class Driver:
         if that fails, try the 5th. Return True if successful, False otherwise.
         """
         try:
+            print(f"[DEBUG] close_reopen() called for {vocab}")
+
             print('trying to close reopen')
             close_button = WebDriverWait(self.driver, 10).until(
                 EC.element_to_be_clickable((By.CLASS_NAME, 'close-gif'))
