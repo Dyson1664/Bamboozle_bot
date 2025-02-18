@@ -3,14 +3,18 @@ from selenium.webdriver.common.by import By
 from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
 from selenium.common.exceptions import WebDriverException
+from selenium import webdriver
+from selenium.webdriver.chrome.service import Service
+from selenium.webdriver.chrome.options import Options
+
+import time
 from time import sleep
 import logging
 import sys
 import psycopg2
+import tempfile
 
-# import db_5
 import postgres_db
-
 from docx import Document
 from word_search_generator import WordSearch
 import threading
@@ -18,9 +22,15 @@ from flask_login import UserMixin, login_user, LoginManager, login_required, log
 from werkzeug.security import generate_password_hash, check_password_hash
 import os
 from dotenv import load_dotenv
-
- # = db_5
 load_dotenv()
+
+import smtplib
+from email.mime.multipart import MIMEMultipart
+from email.mime.base import MIMEBase
+from email.mime.text import MIMEText
+from email import encoders
+import mimetypes
+
 
 PASSWORD = os.getenv('PASSWORD')
 EMAIL = os.getenv('EMAIL')
@@ -29,9 +39,6 @@ E_PASS = os.getenv('E_PASS')
 E_NAME = os.getenv('E_NAME')
 
 
-from flask import Flask, request
-from flask_login import current_user
-from flask_socketio import SocketIO
 app = Flask(__name__)
 app.secret_key = os.getenv('SECRET_KEY')
 
@@ -40,23 +47,20 @@ ENVIRONMENT = os.getenv('ENVIRONMENT', 'development')
 if ENVIRONMENT == 'production':
     # Production settings
     async_mode = 'gevent'
-    debug = True
+    debug = False
 else:
     # Development settings
     async_mode = 'threading'
-    debug = False
+    debug = True
 
+from flask_socketio import SocketIO
 socketio = SocketIO(app, async_mode=async_mode, cors_allowed_origins='*')
 login_manager = LoginManager()
 login_manager.init_app(app)
 login_manager.login_view = 'login'
 
 DATABASE_URL = os.getenv('DATABASE_URL')
-
-# logging.basicConfig(stream=sys.stdout, level=logging.DEBUG,
-#                     format='%(asctime)s %(levelname)s: %(message)s',
-#                     datefmt='%Y-%m-%d %H:%M:%S')
-# logger = logging.getLogger(__name__)
+from psycopg2 import DatabaseError
 
 def get_db_connection():
     try:
@@ -66,11 +70,8 @@ def get_db_connection():
         print(f"Error connecting to the database: {e}")
         return None
 
-from flask_login import UserMixin
-from werkzeug.security import check_password_hash
-from psycopg2 import DatabaseError
-from cryptography.fernet import Fernet
 
+from cryptography.fernet import Fernet
 
 def load_key():
     key = os.getenv('FERNET_KEY')
@@ -200,19 +201,7 @@ class User(UserMixin):
                 conn.close()
 
 
-from selenium import webdriver
-from selenium.webdriver.chrome.service import Service
-from selenium.webdriver.chrome.options import Options
-import sys
-import tempfile
 
-ENVIRONMENT = os.getenv('ENVIRONMENT', 'development')
-
-
-import logging
-logging.getLogger('selenium').setLevel(logging.WARNING)
-import base64
-import time
 
 class Driver:
     def __init__(self):
@@ -256,7 +245,6 @@ class Driver:
 
 
     def sign_in(self, url, email, password):
-        print('1')
         self.driver.get(url)
         try:
             email_input = WebDriverWait(self.driver, 15).until(
@@ -318,42 +306,7 @@ class Driver:
         except WebDriverException as e:
             print("Exception occurred while interacting with the element: ", e)
 
-    def capture_screenshot_and_email(self, label, to_email, user_id):
-        """
-        Saves a screenshot to /tmp, then emails it to `to_email`
-        with 'Screenshot - {label}' as the content. Also logs success/failure.
-        """
-        import os
-        import time
 
-        screenshot_path = f"/tmp/error_screenshot_{time.time()}.png"
-
-        # Try saving the screenshot and check if it was successful.
-        if self.driver.save_screenshot(screenshot_path):
-            print(f"{label} - Screenshot saved at: {screenshot_path}")
-        else:
-            print(f"{label} - Failed to save screenshot at: {screenshot_path}")
-            return  # Exit if screenshot wasn’t saved
-
-        try:
-            # Attempt to send the email with the screenshot attachment.
-            send_email_with_attachment(
-                to_email=to_email,
-                path=screenshot_path,
-                content=f"Screenshot - {label}",
-                user_id=user_id
-            )
-            print(f"Screenshot emailed successfully to {to_email}")
-        except Exception as e:
-            print(f"Failed to email screenshot: {e}")
-        finally:
-            # Only delete the screenshot if it exists.
-            if os.path.exists(screenshot_path):
-                try:
-                    os.remove(screenshot_path)
-                    print(f"{screenshot_path} deleted successfully.")
-                except Exception as del_e:
-                    print(f"Error deleting screenshot: {del_e}")
 
     # loop though adding vocab and clicking pictures
     def create_game_part_two(self, vocabs, email):
@@ -380,18 +333,11 @@ class Driver:
     def questions_search_loop(self, vocab):
         print(f'starting questions_search_loop')
         sleep(2)
-        # only change made
-        # self.capture_screenshot_and_email(
-        #     label=f"error was here--{vocab}",
-        #     to_email="davidreilly02@gmail.com",
-        #     user_id=1
-        # )
         input_box = WebDriverWait(self.driver, 10).until(
             EC.element_to_be_clickable((By.ID, "problem"))
         )
         input_box.clear()
         input_box.send_keys('What is it?')
-        print('entered what is it?')
 
         vocab_box = WebDriverWait(self.driver, 10).until(
             EC.element_to_be_clickable((By.ID, "solution1"))
@@ -399,7 +345,6 @@ class Driver:
         vocab_box.clear()
         vocab_box.send_keys(vocab)
         sleep(1)
-        print(f'entered {vocab} in box')
 
         for attempt in range(3):
             print(f"--- Attempt {attempt + 1} ---")
@@ -425,17 +370,11 @@ class Driver:
                         )
                     )
                     first_image.click()
-                    print(f"Clicked FIRST image of {vocab} successfully.")
+                    # print(f"Clicked FIRST image of {vocab} successfully.")
                     break  # Success; exit the attempt loop
 
                 except Exception as e_first:
                     print(f"Failed to click FIRST image of {vocab}. Error: {e_first}")
-                    self.capture_screenshot_and_email(
-                        label=f"FIRST_IMAGE_ERROR--{vocab}",
-                        to_email="davidreilly02@gmail.com",
-                        user_id=1
-                    )
-
                     # 4) Try the fifth image
                     try:
                         fifth_image = WebDriverWait(self.driver, 15).until(
@@ -449,12 +388,8 @@ class Driver:
 
                     except Exception as e_fifth:
                         print(f"Failed to click FIFTH image of {vocab}. Error: {e_fifth}")
-                        self.capture_screenshot_and_email(
-                            label=f"FIFTH_IMAGE_ERROR--{vocab}",
-                            to_email="davidreilly02@gmail.com",
-                            user_id=1
-                        )
                         print("Both first & fifth failed, calling close_reopen()...")
+
                         if self.close_reopen(vocab):
                             print("close_reopen() succeeded, breaking out of loop.")
                             break  # Break out since close_reopen handled the image click
@@ -469,11 +404,7 @@ class Driver:
 
             except Exception as e_outer:
                 print(f"Exception opening library or waiting for images for {vocab}: {e_outer}")
-                self.capture_screenshot_and_email(
-                    label=f"OPEN_LIBRARY_ERROR--{vocab}",
-                    to_email="davidreilly02@gmail.com",
-                    user_id=1
-                )
+
                 if self.close_reopen(vocab):
                     print("close_reopen() succeeded, breaking out of loop.")
                     break
@@ -489,7 +420,7 @@ class Driver:
             EC.element_to_be_clickable((By.ID, "tally"))
         )
         save_button.click()
-        print("Tally (Save) clicked.")
+        # print("Tally (Save) clicked.")
 
     def close_reopen(self, vocab):
         """
@@ -497,8 +428,6 @@ class Driver:
         if that fails, try the 5th. Return True if successful, False otherwise.
         """
         try:
-            print(f"[DEBUG] close_reopen() called for {vocab}")
-
             print('trying to close reopen')
             close_button = WebDriverWait(self.driver, 10).until(
                 EC.element_to_be_clickable((By.CLASS_NAME, 'close-gif'))
@@ -551,7 +480,7 @@ class Driver:
             cookie_button.click()
             print('Cookies closed')
 
-            #removed from bamboozle website
+            # removed from bamboozle website. Might be needed again
             # close_gpt = WebDriverWait(self.driver, 5).until(
             #     EC.element_to_be_clickable(
             #         (By.XPATH, "//*[@id=\"beamerAnnouncementBar\"]/div[2]/div[2]")
@@ -647,27 +576,22 @@ def logout():
     return redirect(url_for('login'))
 
 
-# main webpag
-import time
-from flask import Flask, render_template, request, session, redirect, url_for, flash, jsonify
-from flask_login import login_required, current_user
-from psycopg2 import DatabaseError
-import postgres_db
 
+# # A simple global cache variable (not used in production)
+# global_data_cache = None
+# cache_last_updated = None
+#
+# def get_cached_setup_data(force_refresh=False):
+#     global global_data_cache, cache_last_updated
+#     # Refresh cache every 5 minutes (300 seconds) or if forced
+#     if force_refresh or global_data_cache is None or (cache_last_updated is None or (time.time() - cache_last_updated > 300)):
+#         # Call your combined setup function from postgres_db
+#         global_data_cache = postgres_db.setup_function_combined()
+#         cache_last_updated = time.time()
+#     return global_data_cache
 
-
-# A simple global cache variable (in production, consider using a more robust solution)
-global_data_cache = None
-cache_last_updated = None
-
-def get_cached_setup_data(force_refresh=False):
-    global global_data_cache, cache_last_updated
-    # Refresh cache every 5 minutes (300 seconds) or if forced
-    if force_refresh or global_data_cache is None or (cache_last_updated is None or (time.time() - cache_last_updated > 300)):
-        # Call your combined setup function from postgres_db
-        global_data_cache = postgres_db.setup_function_combined()
-        cache_last_updated = time.time()
-    return global_data_cache
+# locally add this to book unit:
+#   book_to_units, books, kg_vocab = get_cached_setup_data() instead of postgres_db.setup_function_combined()
 
 
 @app.route('/', methods=['GET', 'POST'])
@@ -687,10 +611,7 @@ def book_unit():
 
     # Setup other data from the database (using cache)
     try:
-        t_setup_function_start = time.time()
-        book_to_units, books, kg_vocab = get_cached_setup_data()
-        t_setup_function_end = time.time()
-        print(f"get_cached_setup_data took: {t_setup_function_end - t_setup_function_start:.3f} seconds")
+        book_to_units, books, kg_vocab = postgres_db.setup_function_combined()
     except DatabaseError as e:
         print(f"Database error: {e}")
         return render_template('error.html', error_message="Database error occurred.")
@@ -712,7 +633,6 @@ def book_unit():
                 flash('Creating Bamboozle', 'info')
             title = request.form.get('bamboozleTitle', '')
             result = handle_bamboozle(vocab_words, title, books, book_to_units, kg_vocab, selected_book, selected_unit, bamboozle_email, bamboozle_password)
-            print(f"handle_bamboozle took: {time.time() - t_bamboozle_start:.3f} seconds")
             return result
 
         elif action == 'reviewQuiz':
@@ -721,7 +641,6 @@ def book_unit():
             if vocabs:
                 flash('Creating Review Quiz', 'info')
             result = handle_review_quiz(vocabs, books, kg_vocab, book_to_units, selected_book, selected_unit, email)
-            print(f"handle_review_quiz took: {time.time() - t_review_quiz_start:.3f} seconds")
             return result
 
         elif action == 'ShowVocab':
@@ -750,7 +669,6 @@ def book_unit():
                 combined_vocab = ', '.join(filter(None, [existing_vocab, ', '.join(new_combined_vocab)]))
             else:
                 combined_vocab = ', '.join(str(item) for item in new_combined_vocab)
-            print(f"handle ShowVocab took: {time.time() - t_show_vocab_start:.3f} seconds")
             return render_template('book_unit.html', vocab=combined_vocab, books=books, book_to_units=book_to_units, kg_vocab=kg_vocab, selected_book=selected_book, selected_unit=selected_unit)
 
         elif action == "wordSearch":
@@ -761,11 +679,9 @@ def book_unit():
             if compress_vocab:
                 flash('Creating Word Search!', 'info')
                 result = handle_wordsearch(vocabs=compress_vocab, normal_vocabs=vocabs, books=books, book_to_units=book_to_units, kg_vocab=kg_vocab, selected_book=selected_book, selected_unit=selected_unit, email=email)
-                print(f"handle_wordsearch took: {time.time() - t_word_search_start:.3f} seconds")
                 return result
 
     total_end = time.time()
-    print(f"Total time in book_unit route: {total_end - total_start:.3f} seconds")
     return render_template('book_unit.html', vocab=combined_vocab, books=books, book_to_units=book_to_units, kg_vocab=kg_vocab, selected_book=selected_book, selected_unit=selected_unit)
 
 
@@ -780,7 +696,6 @@ def setup_bookunit():
     selected_book = session.get('selected_book', 'None')
     selected_unit = session.get('selected_unit', 'None')
     combined_vocab = ''
-    print(f"setup_bookunit took: {time.time() - t_setup_start:.3f} seconds")
     return selected_book, selected_unit, combined_vocab
 
 
@@ -927,7 +842,7 @@ def generate_esl_quiz(prompt, max_tokens=550):
         import openai
         openai.api_key = os.getenv("API_KEY")  # read from environment
         response = openai.ChatCompletion.create(
-            model="gpt-4",
+            model="gpt-3.5-turbo",
             messages=[
                 {"role": "system", "content": "You are a skilled ESL teacher."},
                 {"role": "user", "content": prompt}
@@ -988,13 +903,7 @@ def handle_disconnect():
 def handle_connection():
     print('Client connected')
 
-import smtplib
-from email.mime.multipart import MIMEMultipart
-from email.mime.base import MIMEBase
-from email.mime.text import MIMEText
-from email import encoders
-import os
-import mimetypes
+
 
 
 def send_email_with_attachment(to_email, path, content, user_id, file_path=None):
@@ -1087,10 +996,8 @@ def send_email_with_attachment(to_email, path, content, user_id, file_path=None)
 
 
 if __name__ == '__main__':
-
-    # socketio.run(app, debug=True, port=5001, use_reloader=False, allow_unsafe_werkzeug=True)
     socketio.run(app, debug=debug)
-    pass
+
 
 
 
