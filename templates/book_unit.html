@@ -1,229 +1,274 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>ESL Game Creation</title>
-    <link rel="preload" as="image" href="{{ url_for('static', filename='images/styles/yes.jpg') }}">
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>ESL Game Creation</title>
 
-    <!-- Bootstrap CSS -->
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
-    <link rel="stylesheet" href="{{ url_for('static', filename='css/styles.css') }}">
-    <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@700&display=swap" rel="stylesheet">
-    <script src="https://cdn.socket.io/4.4.1/socket.io.min.js"></script>
-<script>
-    // Initialize the Socket.IO client
+  <!-- You can keep Bootstrap if you want some layout helpers or spacing utilities -->
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" />
+
+  <!-- Your custom styles with .btn-custom, .form-control, etc. -->
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/styles.css') }}" />
+
+  <!-- Socket.IO client -->
+  <script src="https://cdn.socket.io/4.4.1/socket.io.min.js"></script>
+</head>
+
+<body>
+  <div class="overlay">
+    {% with messages = get_flashed_messages(with_categories=true) %}
+      {% if messages %}
+        {% for category, message in messages %}
+          <div class="alert alert-{{ category }}" role="alert">
+            {{ message }}
+          </div>
+        {% endfor %}
+      {% endif %}
+    {% endwith %}
+  </div>
+
+  <!-- Left toast for "started", right toast for "done/error" -->
+  <div id="top-left-toast" class="notification" style="left: 20px;"></div>
+  <div id="top-right-toast" class="notification" style="right: 20px;"></div>
+
+  <div class="container">
+    <h2>ESL Bamboozle Builder</h2>
+
+    {% if error %}
+      <div class="error-message">{{ error }}</div>
+    {% endif %}
+
+    <form id="bookForm" method="post" onsubmit="handleSubmit(event)">
+      <input type="hidden" name="clickedButton" id="clickedButton" value="" />
+
+      <!-- Book dropdown -->
+      <div class="form-group">
+        <label for="bookName">Book:</label>
+        <select class="form-control" name="bookName" id="bookName" onchange="updateUnits()">
+          <option value="None" {% if not selected_book or selected_book == 'None' %} selected {% endif %}>None</option>
+          {% for book in books %}
+            <option value="{{ book }}" {% if selected_book == book %} selected {% endif %}>
+              {{ book }}
+            </option>
+          {% endfor %}
+        </select>
+      </div>
+
+      <!-- Unit dropdown -->
+      <div class="form-group">
+        <label for="unitNumber">Unit:</label>
+        <select class="form-control" name="unitNumber" id="unitNumber">
+          <!-- Populated by updateUnits() JS -->
+        </select>
+      </div>
+
+      <!-- KG topic -->
+      <div class="form-group">
+        <label for="kgTitle">Kindergarten Topic:</label>
+        <select class="form-control" name="kgTitle" id="kgTitle">
+          <option value="NONE">None</option>
+          {% for title in kg_vocab.keys() %}
+            <option value="{{ title }}">{{ title }}</option>
+          {% endfor %}
+        </select>
+      </div>
+
+      <!-- Bamboozle title input -->
+      <div class="form-group">
+        <label for="bamboozleTitle">Bamboozle Title:</label>
+        <input
+          type="text"
+          class="form-control"
+          id="bamboozleTitle"
+          name="bamboozleTitle"
+          placeholder="Enter Bamboozle title"
+        />
+      </div>
+
+      <!-- Show Vocab -->
+      <button
+  type="submit"
+  class="btn-custom"
+  onclick="setClickedButton('ShowVocab')"
+  style="width: 100%; margin-bottom: 15px;"
+>
+  Show Vocab
+</button>
+
+
+      <!-- Vocab textarea -->
+      <div class="form-group">
+        <label for="vocab">Vocabulary:</label>
+        <textarea
+          class="form-control"
+          id="vocab"
+          name="vocab"
+          rows="4"
+          placeholder="View vocab"
+        >{{ vocab }}</textarea>
+      </div>
+
+      <!-- Create Bamboozle => full width -->
+      <button
+        type="submit"
+        class="btn-custom"
+        name="action"
+        value="bamboozle"
+        onclick="setClickedButton('bamboozle')"
+        style="width: 100%; margin-bottom: 10px;"
+      >
+        Create Bamboozle
+      </button>
+
+      <div class="flex-row" style="margin-bottom: 0px;">
+        <button type="submit" class="btn-custom"
+                name="action" value="reviewQuiz"
+                onclick="setClickedButton('reviewQuiz')"
+                style="flex: 1;">
+          Create Review Quiz
+        </button>
+        <button type="submit" class="btn-custom"
+                name="action" value="wordSearch"
+                onclick="setClickedButton('wordSearch')"
+                style="flex: 1;">
+          Create Word Search
+        </button>
+      </div>
+
+      <!-- Row with two side-by-side links (each half width) -->
+      <div class="flex-row" style="margin-top: 0px;">
+        <a href="https://apps.cec.com.vn/my-calendar/overview"
+           target="_blank"
+           class="btn-custom"
+           style="flex: 1; text-align: center; text-decoration: none;">
+          CEC APP
+        </a>
+        <a href="https://www.baamboozle.com/mygames"
+           target="_blank"
+           class="btn-custom"
+           style="flex: 1; text-align: center; text-decoration: none;">
+          Bamboozle
+        </a>
+      </div>
+  <!-- Minimal Socket.IO / JS logic below -->
+  <script>
     var socket = io();
-
-    // Function to handle registration after connecting
-    socket.on('connect', function() {
-        console.log('Connected to Socket.IO server');
-
-        // Send the user ID to the server to register the SID
-        socket.emit('register', {'user_id': '{{ current_user.get_id() }}'});
+    socket.on("connect", function() {
+      socket.emit("register", { user_id: "{{ current_user.get_id() }}" });
     });
 
-    // Queue to handle multiple email-sent messages
-    var messageQueue = [];
-    var showingMessage = false;
+    let startedToastTimer = null;
 
-    // Function to display the sent/made notification
-    function displayMessage() {
-        if (messageQueue.length > 0 && !showingMessage) {
-            showingMessage = true;
-            var message = messageQueue.shift();
+function showStartedToast(msg) {
+  const leftToast = document.getElementById("top-left-toast");
 
-            // Display the message in the email-status div
-            var emailStatusDiv = document.getElementById('email-status');
-            emailStatusDiv.innerText = message;
-            emailStatusDiv.classList.add('show');
+  // Update text and show
+  leftToast.innerText = msg;
+  leftToast.classList.add("show");
 
-            // Clear the message after 2 seconds
-            setTimeout(function() {
-                emailStatusDiv.classList.remove('show');
-                emailStatusDiv.innerText = '';
-                showingMessage = false;
-                displayMessage();
-            }, 2000);
-        }
+  // If there's an existing timer, clear it so it won't hide early
+  if (startedToastTimer) {
+    clearTimeout(startedToastTimer);
+  }
+
+  // Start a fresh 2-second timer
+  startedToastTimer = setTimeout(() => {
+    leftToast.classList.remove("show");
+    leftToast.innerText = "";
+    startedToastTimer = null;
+  }, 2000);
+}
+
+
+    // Show "Done" or "Error" top-right
+    function showFinishedToast(msg, isError=false) {
+      var right = document.getElementById("top-right-toast");
+      if (isError) {
+        right.style.backgroundColor = "#f44336"; // red
+      } else {
+        right.style.backgroundColor = "#0099cc"; // teal
+      }
+      right.innerText = msg;
+      right.classList.add("show");
+      setTimeout(function() { right.classList.remove("show"); }, 2500);
     }
 
-    // Listen for the 'email_sent' event from the server
-    socket.on('email_sent', function(data) {
-        console.log('Received message:', data.message);  // Log the message to the console
+    // Socket events
+    socket.on("bamboozle_started", d => showStartedToast(d.message));
+    socket.on("bamboozle_done", d => showFinishedToast(d.message));
+    socket.on("review_quiz_started", d => showStartedToast(d.message));
+    socket.on("review_quiz_done", d => showFinishedToast(d.message));
+    socket.on("wordsearch_started", d => showStartedToast(d.message));
+    socket.on("wordsearch_done", d => showFinishedToast(d.message));
+    socket.on("email_error", d => showFinishedToast("Error: " + d.message, true));
 
-        // Add the received message to the queue
-        messageQueue.push(data.message);
-
-        // Try to display the message
-        displayMessage();
-    });
-
-    // Listen for the 'email_error' event from the server
-    socket.on('email_error', function(data) {
-        console.log('Received error:', data.message);  // Log the error message to the console
-
-        // Add the error message to the queue
-        messageQueue.push(data.message);
-
-        // Try to display the message
-        displayMessage();
-    });
-</script>
-
-<script>
-    // Function to show the "creating" notification
-    function showCreatingNotification(message) {
-        var creatingStatusDiv = document.getElementById('creating-status');
-        creatingStatusDiv.innerText = message;
-        creatingStatusDiv.classList.add('show');
-
-        // Hide after 2 seconds
-        setTimeout(function() {
-            creatingStatusDiv.classList.remove('show');
-            creatingStatusDiv.innerText = '';
-        }, 2000);
-    }
-
-    // Function to set which button was clicked
-    function setClickedButton(value) {
-        document.getElementById('clickedButton').value = value;
-    }
-
-    // Attach event listener to the form submission
-    document.getElementById('bookForm').addEventListener('submit', function(event) {
-        var clickedButton = document.getElementById('clickedButton').value;
-
-        if (clickedButton === 'wordSearch') {
-            showCreatingNotification('Creating Word Search...');
-        } else if (clickedButton === 'reviewQuiz') {
-            showCreatingNotification('Creating Review Quiz...');
-        } else if (clickedButton === 'bamboozle') {
-            showCreatingNotification('Creating Bamboozle...');
-        }
-    });
-</script>
-
-<script>
-    // Existing JavaScript code for updating units and form validation
+    // Book -> Unit logic
     var bookToUnits = {{ book_to_units | tojson | safe }};
     var selected_unit = "{{ selected_unit }}";
 
     function updateUnits() {
-        var selectedBook = document.getElementById('bookName').value;
-        var unitsDropdown = document.getElementById('unitNumber');
-        var units = bookToUnits[selectedBook] || [];
-        unitsDropdown.innerHTML = '';
-        units.forEach(function(unit) {
-            var opt = document.createElement('option');
-            opt.value = unit;
-            opt.innerHTML = unit;
-            if (unit == selected_unit) {
-                opt.selected = true;
-            }
-            unitsDropdown.appendChild(opt);
-        });
+      var selectedBook = document.getElementById("bookName").value;
+      var unitsDropdown = document.getElementById("unitNumber");
+      var units = bookToUnits[selectedBook] || [];
+      unitsDropdown.innerHTML = "";
+
+      units.forEach(function(u) {
+        var opt = document.createElement("option");
+        opt.value = u;
+        opt.textContent = u;
+        if (u === selected_unit) {
+          opt.selected = true;
+        }
+        unitsDropdown.appendChild(opt);
+      });
     }
 
     window.onload = function() {
-        updateUnits();
-        document.getElementById('bookName').value = "{{ selected_book }}";
+      updateUnits();
+      document.getElementById("bookName").value = "{{ selected_book }}";
+    };
+
+    function setClickedButton(val) {
+      document.getElementById("clickedButton").value = val;
     }
 
-    function validateForm() {
-        var clickedButton = document.getElementById('clickedButton').value;
-        var bamboozleTitle = document.getElementById('bamboozleTitle').value.trim();
+    // Intercept submission
+    async function handleSubmit(ev) {
+      ev.preventDefault();
+      var form = ev.target;
+      var clicked = document.getElementById("clickedButton").value;
 
-        if (clickedButton === 'bamboozle' && bamboozleTitle === '') {
-            alert('Please enter a Bamboozle title');
-            return false;  // Prevent form submission
+      // ShowVocab => normal post => page reload => user sees updated vocab
+      if (clicked === "ShowVocab") {
+        form.submit();
+        return;
+      }
+
+      // If Bamboozle => check for a title
+      if (clicked === "bamboozle") {
+        var title = document.getElementById("bamboozleTitle").value.trim();
+        if (!title) {
+          alert("Please enter a Bamboozle title");
+          return;
         }
+      }
 
-        return true;  // Allow form submission
+      // Else do a fetch => no page reload
+      var formData = new FormData(form);
+      try {
+        var response = await fetch("/", { method: "POST", body: formData });
+        var json = await response.json();
+        console.log("Fetch response:", json);
+      } catch (err) {
+        console.error("Fetch error:", err);
+        showFinishedToast("Error: " + err.message, true);
+      }
     }
-</script>
-</head>
-<body>
-    <div class="overlay">
-        {% with messages = get_flashed_messages(with_categories=true) %}
-            {% if messages %}
-                {% for category, message in messages %}
-                    <div class="alert alert-{{ category }} {% if category != 'info' %}alert-dismissible{% endif %} fade show" role="alert">
-                        {{ message }}
-                        {% if category != 'info' %}
-                            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
-                        {% endif %}
-                    </div>
-                {% endfor %}
-            {% endif %}
-        {% endwith %}
+  </script>
 
-        <div id="email-status" class="notification"></div>
-        <div id="creating-status" class="notification"></div>
-
-    </div>
-
-    <div class="container">
-        <h2>ESL Bamboozle Builder</h2>
-        {% if error %}
-            <div class="error-message">{{ error }}</div>
-        {% endif %}
-        <form id="bookForm" method="post" onsubmit="return validateForm()">
-            <div class="form-group">
-                <label for="bookName">Book:</label>
-                <select class="form-control" name="bookName" id="bookName" onchange="updateUnits()">
-                    <option value="None" {% if not selected_book or selected_book =='None' %} selected {% endif %}>None</option>
-                    {% for book in books %}
-                        <option value="{{ book }}" {% if selected_book == book %} selected {% endif %}>{{ book }}</option>
-                    {% endfor %}
-                </select>
-            </div>
-            <div class="form-group">
-                <label for="unitNumber">Unit:</label>
-                <select class="form-control" name="unitNumber" id="unitNumber">
-                    <!-- Units will be dynamically populated -->
-                </select>
-            </div>
-            <div class="form-group">
-                <label for="kgTitle">Kindergarten Topic:</label>
-                <select class="form-control" name="kgTitle" id="kgTitle">
-                    <option value="NONE">None</option>
-                    {% for title in kg_vocab.keys() %}
-                        <option value="{{ title }}">{{ title }}</option>
-                    {% endfor %}
-                </select>
-            </div>
-            <div class="form-group">
-                <label for="bamboozleTitle">Bamboozle Title:</label>
-                <input type="text" class="form-control" id="bamboozleTitle" name="bamboozleTitle" placeholder="Enter Bamboozle title">
-            </div>
-            <input type="hidden" name="clickedButton" id="clickedButton" value="" />
-            <button type="submit" class="btn btn-custom" name="action" value="ShowVocab" onclick="setClickedButton('ShowVocab')">Show Vocab</button>
-            <div class="form-group">
-                <textarea class="form-control" id="vocab" name="vocab" placeholder="View vocab" rows="4">{{ vocab }}</textarea>
-            </div>
-            <button type="submit" class="btn btn-custom" name="action" value="bamboozle" onclick="setClickedButton('bamboozle')">Create Bamboozle</button>
-            <div class="d-grid gap-2 d-md-flex justify-content-md-end">
-                <button type="submit" class="btn btn-custom" name="action" value="reviewQuiz">Create Review Quiz</button>
-                <button type="submit" class="btn btn-custom" name="action" value="wordSearch">Create Word Search</button>
-            </div>
-            <div class="d-grid gap-2 d-md-flex justify-content-md-end">
-                <a href="https://apps.cec.com.vn/my-calendar/overview" target="_blank" class="btn btn-custom">CEC APP</a>
-                <a href="https://www.baamboozle.com/mygames" target="_blank" class="btn btn-custom">Bamboozle</a>
-            </div>
-        </form>
-    </div>
-    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
-    <script>
-        document.addEventListener('DOMContentLoaded', function () {
-            setTimeout(function () {
-                var alertList = document.querySelectorAll('.alert');
-                alertList.forEach(function (alert) {
-                    var bsAlert = new bootstrap.Alert(alert);
-                    bsAlert.close();
-                });
-            }, 2000); // Time in milliseconds (5000ms = 5 seconds)
-        });
-    </script>
-    </body>
+  <!-- Optional: if you still want some of Bootstrap's JS (modals, etc.) -->
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+</body>
 </html>
+

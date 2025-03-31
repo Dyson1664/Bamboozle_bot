@@ -161,3 +161,18 @@ body.register-page {
     background-repeat: no-repeat;       /* Prevent the image from repeating */
     background-attachment: fixed;       /* Make the background fixed when scrolling */
 }
+
+/* Flex container for two-button rows with minimal vertical spacing */
+.flex-row {
+  display: flex;
+  gap: 6px;
+  margin: 0;
+  padding: 0;
+}
+
+/* Ensure the buttons and links inside have no extra margin */
+.flex-row button,
+.flex-row a {
+  margin: .5;
+  /* You can adjust padding as needed */
+}
