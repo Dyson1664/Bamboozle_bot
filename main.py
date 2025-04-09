@@ -1,3 +1,5 @@
+from xml.sax.saxutils import escape
+
 from flask import Flask, render_template, request, session, redirect, url_for, flash, jsonify
 from selenium.webdriver.common.by import By
 from selenium.webdriver.support.ui import WebDriverWait
@@ -597,6 +599,29 @@ def logout():
 from flask import Flask, render_template, request, jsonify, session
 from flask_socketio import SocketIO
 from flask_login import login_required, current_user
+
+@app.route('/keep_alive', methods=['GET', 'POST'])
+def keep_alive():
+    conn = postgres_db.get_db_connection()
+    cursor = conn.cursor()
+    cursor.execute('SELECT DISTINCT title from kindergarten')
+    ans = cursor.fetchall()
+    try:
+        if ans:
+            print(ans)
+            return 'Kept Alive'
+        else:
+            return 'PING NOT WORKING'
+    except DatabaseError as e:
+            print(f"Database error: {e}")
+            return render_template('error.html', error_message="Database error occurred.")
+
+
+
+
+
+
+
 
 @app.route('/', methods=['GET', 'POST'])
 @login_required
