@@ -307,16 +307,18 @@ class Driver:
                 EC.element_to_be_clickable((By.XPATH, image_library_button_xpath))
             ).click()
             sleep(1)
+            print('Open image library')
 
             # Switch to the standard image library
-            set_to_image_button = WebDriverWait(self.driver, 10).until(
+            set_to_image_button = WebDriverWait(self.driver, 20).until(
                 EC.element_to_be_clickable((By.ID, "web-lib"))
             )
             set_to_image_button.click()
             sleep(1)
+            print('Switch to the standard image library')
 
             # Close library
-            close_button = WebDriverWait(self.driver, 10).until(
+            close_button = WebDriverWait(self.driver, 20).until(
                 EC.element_to_be_clickable((By.CSS_SELECTOR, "button.close.close-gif"))
             )
             close_button.click()
