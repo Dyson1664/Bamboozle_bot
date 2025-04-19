@@ -278,16 +278,19 @@ class Driver:
     # create game name and description
     def create_game(self, title):
         try:
+            print('Creating game function called')
             title_box = WebDriverWait(self.driver, 10).until(
                 EC.presence_of_element_located((By.ID, 'one'))
             )
             title_box.clear()
             title_box.send_keys(title)
+            print('Title game entered')
 
             description_box = WebDriverWait(self.driver, 10).until(
                 EC.presence_of_element_located((By.ID, 'two'))
             )
             description_box.send_keys(title)
+            print('description_box entered')
 
             self.accept_cookies()
 
@@ -295,6 +298,7 @@ class Driver:
                 EC.presence_of_element_located((By.ID, 'five'))
             )
             make_game_button.click()
+            print('Make game clicked')
             sleep(2)
 
             # Open image library
@@ -317,6 +321,7 @@ class Driver:
             )
             close_button.click()
             sleep(2)
+            print('Image opened and closed')
 
         except (WebDriverException, Exception) as e:
             print("Exception occurred in create_game:", e)
@@ -352,7 +357,12 @@ class Driver:
                 EC.element_to_be_clickable((By.ID, "problem"))
             )
             input_box.clear()
+            print('Input box cleared')
+
             input_box.send_keys('What is it?')
+            print('Input box entered What is it?')
+
+
 
             vocab_box = WebDriverWait(self.driver, 10).until(
                 EC.element_to_be_clickable((By.ID, "solution1"))
@@ -360,6 +370,8 @@ class Driver:
             vocab_box.clear()
             vocab_box.send_keys(vocab)
             sleep(1)
+            print(f'Input box entered {vocab}')
+
 
             # Try up to 3 attempts at picking an image
             for attempt in range(3):
