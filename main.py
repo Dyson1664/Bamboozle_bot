@@ -293,13 +293,18 @@ class Driver:
             print('description_box entered')
 
             self.accept_cookies()
+            sleep(1)
+            self.close_new_pop_up()
 
             make_game_button = WebDriverWait(self.driver, 10).until(
                 EC.presence_of_element_located((By.ID, 'five'))
             )
             make_game_button.click()
             print('Make game clicked')
+            print('1')
             sleep(2)
+            print('2')
+
 
             # Open image library
             image_library_button_xpath = "//div[@id='question-form']//button[@type='button']"
@@ -501,6 +506,33 @@ class Driver:
         except (WebDriverException, Exception) as e:
             print("Exception occurred while closing popup or re-opening:", e)
             return False
+
+    def close_new_pop_up(self):
+        """
+        Clicks the Beamer announcement‑bar close (×) button if it’s present.
+        Silently returns if the popup never appeared.
+        """
+        try:
+            close_btn = WebDriverWait(self.driver, 5).until(
+                EC.element_to_be_clickable(
+                    (By.CSS_SELECTOR, "div.beamerAnnouncementBarClose")
+                )
+            )
+            close_btn.click()
+
+            # Optional: wait until it’s gone to avoid overlay issues
+            WebDriverWait(self.driver, 5).until(
+                EC.invisibility_of_element_located(
+                    (By.CSS_SELECTOR, "div.beamerAnnouncementBarClose")
+                )
+            )
+            print("Beamer popup closed.")
+
+        except TimeoutException:
+            # Popup didn’t show up in this session – nothing to do.
+            pass
+        except (WebDriverException, Exception) as e:
+            print("Exception occurred in close_new_pop_up:", e)
 
     def accept_cookies(self):
         try:
